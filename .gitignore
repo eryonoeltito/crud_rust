@@ -1,0 +1,18 @@
+
+# File kredensial dan konfigurasi rahasia
+.env
+.env.*
+!.env.example
+
+# Folder hasil build Rust
+/target/
+
+# Folder editor
+.vscode/
+# File kredensial dan konfigurasi rahasia
+.env
+.env.*
+!.env.example
+
+# Folder hasil build Rust
+/target/
