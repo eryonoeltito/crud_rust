@@ -17,6 +17,28 @@ Bentuknya adalah array dari array, misalnya:
 
 `collect()` dibutuhkan karena `map()` menghasilkan iterator, bukan langsung `Vec`. Tanpa `collect()`, tipe data tidak cocok dengan `Json<Vec<Vec<Value>>>` yang diminta fungsi.
 
+into_iter()
+
+Menyiapkan iterator untuk menghasilkan setiap struct Barang.
+
+
+
+map()
+
+Mengubah setiap Barang menjadi vector nilai JSON, misalnya [1, "Monitor", 10, "Rp1.500.000,00"].
+
+
+
+collect()
+
+Mengumpulkan semua vector barang menjadi satu Vec<Vec<Value>>.
+
+
+
+Json(data)
+
+Membungkus data tersebut menjadi respons JSON Axum yang dikirim ke pemanggil API.
+
 ## Detail barang
 `detail_barang_response` menerima satu `Barang`, jadi cukup membuat satu `vec!`; tidak perlu `map()` dan `collect()` karena tidak memproses kumpulan item.
 
