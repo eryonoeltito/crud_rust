@@ -60,3 +60,7 @@ sqlx::query_as::<_, Barang>(
 
 ## `fetch_one` vs `fetch_optional`
 `fetch_one` cocok bila hasil satu baris wajib ada; jika tidak ada, operasi error. `fetch_optional` cocok untuk pencarian berdasarkan ID karena tidak ditemukan adalah kondisi yang perlu ditangani menjadi HTTP 404, bukan selalu dianggap error database.
+
+Kolom harga di PostgreSQL menggunakan NUMERIC, sedangkan field harga pada struct Rust saya menggunakan f64. Karena tipe datanya berbeda, saya menggunakan ::float8 pada query untuk mengonversi nilai hasil query menjadi tipe yang sesuai dengan f64 di Rust.
+
+NUMERIC adalah tipe data PostgreSQL untuk menyimpan angka dengan presisi desimal yang dapat ditentukan. Tipe ini cocok untuk harga karena angka desimalnya bisa disimpan secara tepat dalam batas presisi yang ditentukan.
