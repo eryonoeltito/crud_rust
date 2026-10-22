@@ -64,3 +64,5 @@ sqlx::query_as::<_, Barang>(
 Kolom harga di PostgreSQL menggunakan NUMERIC, sedangkan field harga pada struct Rust saya menggunakan f64. Karena tipe datanya berbeda, saya menggunakan ::float8 pada query untuk mengonversi nilai hasil query menjadi tipe yang sesuai dengan f64 di Rust.
 
 NUMERIC adalah tipe data PostgreSQL untuk menyimpan angka dengan presisi desimal yang dapat ditentukan. Tipe ini cocok untuk harga karena angka desimalnya bisa disimpan secara tepat dalam batas presisi yang ditentukan.
+
+Karena operasi DELETE bertujuan menghapus data, bukan mengambil baris-baris data. Oleh karena itu, saya menggunakan .execute(pool), sedangkan .fetch_all(pool) digunakan ketika ingin mengambil semua baris hasil query.
