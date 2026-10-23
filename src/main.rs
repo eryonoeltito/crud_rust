@@ -3,6 +3,7 @@ mod models;
 mod controllers;
 mod views;
 mod routes;
+mod middleware;
 
 use axum::{
     routing::get,
@@ -12,8 +13,9 @@ use axum::{
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
+use tower_sessions::{Expiry, MemoryStore, SessionManagerLayer};
 
-use crate::routes::barang_routes;
+use crate::routes::{auth_routes, barang_routes};
 
 #[tokio::main]
 async fn main() {
@@ -30,10 +32,18 @@ async fn main() {
 
     println!("Berhasil terhubung ke PostgreSQL!");
 
+    let session_store = MemoryStore::default();
+
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnSessionEnd);
+
     let app = Router::new()
         .route("/health", get(health_check))
         .merge(barang_routes::routes())
-        .with_state(pool);
+        .merge(auth_routes::routes())
+        .with_state(pool)
+        .layer(session_layer);
 
     let listener = TcpListener::bind("127.0.0.1:3000")
         .await
