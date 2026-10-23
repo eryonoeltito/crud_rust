@@ -66,3 +66,5 @@ Kolom harga di PostgreSQL menggunakan NUMERIC, sedangkan field harga pada struct
 NUMERIC adalah tipe data PostgreSQL untuk menyimpan angka dengan presisi desimal yang dapat ditentukan. Tipe ini cocok untuk harga karena angka desimalnya bisa disimpan secara tepat dalam batas presisi yang ditentukan.
 
 Karena operasi DELETE bertujuan menghapus data, bukan mengambil baris-baris data. Oleh karena itu, saya menggunakan .execute(pool), sedangkan .fetch_all(pool) digunakan ketika ingin mengambil semua baris hasil query.
+
+Saya menggunakan if/else karena variabel terhapus sudah berupa boolean, sehingga hanya perlu memeriksa apakah nilainya true atau false. Error database ditangani secara terpisah. Sebenarnya match juga bisa digunakan, tetapi if/else lebih sederhana untuk kondisi ini.
