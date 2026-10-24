@@ -3,22 +3,41 @@ use axum::{
     extract::Request,
     http::StatusCode,
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
+    Json,
 };
+use serde_json::json;
 use tower_sessions::Session;
 
-pub async fn wajib_login(
-    session: Session,
-    request: Request,
-    next: Next,
-) -> Result<Response, StatusCode> {
-    let username = session
-        .get::<String>("username")
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    pub async fn wajib_login(
+        session: Session,
+        request: Request,
+        next: Next,
+    ) -> Response {
+        let username = match session.get::<String>("username").await {
+            Ok(username) => username,
+            Err(_) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({
+                        "status": "error",
+                        "message": "Gagal memeriksa session"
+                    })),
+                )
+                    .into_response();
+            }
+        };
 
-    match username {
-        Some(_) => Ok(next.run(request).await),
-        None => Err(StatusCode::UNAUTHORIZED),
+        if username.is_none() {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({
+                    "status": "error",
+                    "message": "Silakan login terlebih dahulu"
+                })),
+            )
+                .into_response();
+        }
+
+        next.run(request).await
     }
-}
