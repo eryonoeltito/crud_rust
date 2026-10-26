@@ -18,3 +18,11 @@ Catatan ini mengikuti source dalam `inventaris_api_aman(1).zip` yang diperiksa 2
 **File `mod.rs` sengaja tidak dibuatkan catatan**, sesuai permintaan. File itu tetap disebut seperlunya bila dibutuhkan untuk memahami cara modul dipanggil.
 
 > Batasan: ZIP ini tidak menyertakan `.env`, database, atau frontend. Catatan menjelaskan source yang ada di ZIP, bukan memastikan aplikasi sudah diuji runtime. Jangan pernah mengirim password database asli.
+
+Dokumentasi autentikasi yang dipisah per file:
+- `11-model-user.md` — penjelasan kode `models/user.rs`.
+- `12-controller-auth.md` — penjelasan kode controller login/logout.
+- `13-routes-auth.md` — penjelasan route login/logout.
+- `14-middleware-auth.md` — penjelasan middleware pemeriksaan session.
+- `15-main-session.md` — penjelasan konfigurasi session pada `main.rs`.
+- `16-tes-curl-session.md` — pengujian cURL terpisah dari penjelasan kode.
