@@ -1,4 +1,3 @@
-
 use sqlx::PgPool;
 
 pub struct User;
@@ -15,7 +14,7 @@ impl User {
                 FROM users
                 WHERE username = $1
                   AND password = $2
-            )"
+            )",
         )
         .bind(username)
         .bind(password)

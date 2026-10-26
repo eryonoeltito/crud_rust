@@ -1,21 +1,22 @@
-pub fn format_nominal(harga: f64) -> String {
-        let nominal = format!("{:.2}", harga);
-        let bagian: Vec<&str> = nominal.split('.').collect();
+use rust_decimal::Decimal;
 
-        let angka = bagian[0];
-        let desimal = bagian[1];
+pub fn format_nominal(harga: Decimal) -> String {
+    let nominal = format!("{harga:.2}");
+    let (angka, desimal) = nominal
+        .split_once('.')
+        .expect("format harga selalu menyertakan dua angka desimal");
+    let (tanda, angka) = angka
+        .strip_prefix('-')
+        .map_or(("", angka), |angka| ("-", angka));
 
-        let mut hasil = String::new();
-
-        for (i, digit) in angka.chars().rev().enumerate() {
-            if i > 0 && i % 3 == 0 {
-                hasil.push('.');
-            }
-
-            hasil.push(digit);
+    let mut angka_terbalik = String::new();
+    for (i, digit) in angka.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            angka_terbalik.push('.');
         }
-
-        let angka_format: String = hasil.chars().rev().collect();
-
-        format!("Rp{},{}", angka_format, desimal)
+        angka_terbalik.push(digit);
     }
+    let angka_format = angka_terbalik.chars().rev().collect::<String>();
+
+    format!("{tanda}Rp{angka_format},{desimal}")
+}

@@ -1,70 +1,44 @@
 # 04 — `src/models/barang.rs`
 
-Model mendefinisikan bentuk data dan operasi SQL untuk barang.
+Model mendefinisikan bentuk data barang, validasi data masuk, serta fungsi untuk membaca dan mengubah tabel `barang` melalui SQLx.
 
 ## Struct data
-```rust
-#[derive(Debug, Serialize, FromRow)]
-pub struct Barang { pub id: i32, pub nama: String, pub stok: i32, pub harga: f64 }
-```
-- `struct` mengelompokkan beberapa nilai sebagai satu barang.
-- `Serialize` memungkinkan data diserialisasi jika diperlukan.
-- `FromRow` membantu SQLx memetakan kolom hasil query ke field struct.
-- `pub` membuat field dapat diakses dari modul lain.
 
-**Jika tanpa `FromRow`?** `query_as::<_, Barang>` tidak bisa memakai implementasi pemetaan otomatis yang disediakan derive tersebut; perlu implementasi/manual mapping atau cara query lain.
+`Barang` adalah model hasil query. `FromRow` memungkinkan SQLx memetakan kolom query ke field dengan nama yang sesuai, dan `Serialize` tersedia bila model perlu diserialisasi. Harga bertipe `rust_decimal::Decimal`, cocok untuk nilai desimal seperti uang.
 
-## Data masuk
-`BarangBaru` memakai `Deserialize`, karena datang dari JSON request. `BarangUpdate` memakai `Option<T>` agar field boleh tidak dikirim saat PATCH.
+`BarangBaru` adalah bentuk JSON lengkap untuk POST dan PUT. `Deserialize` memungkinkan extractor Axum membaca request JSON menjadi struct ini.
 
-Contoh PATCH:
+`BarangUpdate` adalah bentuk JSON parsial untuk PATCH. Field `Option<T>` dapat berisi `Some(nilai)` ketika dikirim atau `None` ketika tidak disertakan. Harga parsial juga menggunakan `Option<Decimal>`.
+
+Contoh request:
+
 ```json
-{"stok": 12}
+{"nama":"Monitor","stok":10,"harga":1500000.50}
 ```
-`nama` dan `harga` menjadi `None`; stok menjadi `Some(12)`. Jika memakai `String`/`i32` biasa untuk semua field, JSON parsial yang tidak menyertakan field bisa gagal dideserialisasi.
 
-## Validasi
-`BarangBaru::validasi()` membuat `Vec<String>` untuk menampung semua kesalahan. `trim().is_empty()` menolak nama kosong atau hanya spasi. Stok dan harga negatif ditolak. Jika tidak ada kesalahan, hasilnya `Ok(())`; jika ada, `Err(errors)`.
+## `BarangBaru::validasi`
 
-**Mengapa kumpulkan error?** Pengguna bisa mengetahui beberapa kesalahan sekaligus. Tanpa `Vec`, program bisa berhenti pada kesalahan pertama dan pengguna harus memperbaiki satu per satu. Alternatif sederhana: langsung mengembalikan satu pesan error pertama.
+Mengumpulkan pesan kesalahan dalam `Vec<String>`. Nama yang kosong setelah `trim()` ditolak; stok negatif ditolak; harga di bawah `Decimal::ZERO` ditolak. Fungsi mengembalikan `Ok(())` jika valid atau `Err(errors)` jika ada masalah. Validasi harga memakai perbandingan Decimal, tanpa konversi ke `f64`.
 
-Validasi di aplikasi meningkatkan pesan yang jelas, tetapi constraint database juga penting sebagai lapisan perlindungan kedua.
+Validasi aplikasi memberi pesan yang jelas kepada client. Constraint database tetap dapat dipakai sebagai perlindungan tambahan.
 
 ## Query dan parameter binding
-Contoh:
-```rust
-sqlx::query_as::<_, Barang>(
-    "SELECT id, nama, stok, harga::float8 AS harga FROM barang WHERE id = $1"
-)
-.bind(id)
-.fetch_optional(pool)
-.await?;
-```
-- `query_as` meminta hasil query dipetakan ke `Barang`.
-- `$1` adalah parameter pertama PostgreSQL.
-- `.bind(id)` memasukkan nilai ID sebagai parameter, bukan menggabungkan teks SQL.
-- `fetch_optional` menghasilkan `Some(data)` bila ditemukan atau `None` bila tidak ada baris.
-- `.await` menunggu operasi async; `?` meneruskan error ke pemanggil.
 
-**Kenapa `.bind()`?** Lebih aman dan benar untuk nilai input dibanding membangun SQL seperti `format!("... WHERE id = {}", id)`, yang dapat memunculkan risiko SQL injection jika input teks digabungkan. Parameter binding juga menangani tipe nilai dengan tepat.
+Semua query memakai placeholder PostgreSQL (`$1`, `$2`, dan seterusnya) serta `.bind(...)`. Parameter binding mengirim nilai terpisah dari teks SQL dan menghindari penyusunan query dari string input.
+
+Kolom `harga` dibaca dan dikembalikan sebagai `NUMERIC` PostgreSQL langsung ke `Decimal`. Cast lama `harga::float8 AS harga` sudah dihilangkan karena mengubah nilai uang menjadi floating point.
 
 ## Fungsi model
-- `semua`: `fetch_all` mengambil semua baris dan mengembalikan `Vec<Barang>`; `ORDER BY id` membuat urutan hasil jelas.
-- `berdasarkan_id`: `fetch_optional` karena ID mungkin tidak ada.
-- `buat`: `INSERT ... RETURNING` memasukkan data sekaligus mengambil baris yang baru dibuat, termasuk ID yang dihasilkan DB.
-- `ubah`: `UPDATE` mengganti seluruh field yang diminta PUT; `Option<Barang>` membedakan ditemukan/tidak.
-- `patch`: `COALESCE($1, nama)` memilih nilai baru bila bukan NULL, selain itu mempertahankan kolom lama. Ini cocok untuk update sebagian.
-- `hapus`: `DELETE ... RETURNING id` lalu `is_some()` menghasilkan `true` bila ada baris yang terhapus, `false` bila ID tidak ada.
 
-**Mengapa `harga::float8 AS harga`?** Kolom database bertipe numeric, sedangkan field Rust di sini `f64`. Cast dan alias menyelaraskan tipe/nama hasil query dengan field model. Untuk sistem uang yang butuh presisi finansial tinggi, lebih baik pertimbangkan tipe decimal daripada `f64`; ini adalah kompromi representasi pada source saat ini.
+- `semua(pool)`: menjalankan SELECT semua barang, mengurutkan berdasarkan `id`, lalu `fetch_all` menghasilkan `Vec<Barang>`.
+- `berdasarkan_id(pool, id)`: SELECT dengan parameter ID. `fetch_optional` menghasilkan `Some(Barang)` jika ada dan `None` jika tidak ada.
+- `buat(pool, data)`: INSERT nama, stok, dan harga. `RETURNING` mengambil baris yang baru dibuat; `fetch_one` dipakai karena hasil satu baris diharapkan.
+- `ubah(pool, id, data)`: PUT mengganti nama, stok, dan harga. Hasil `fetch_optional` membedakan barang ditemukan atau tidak.
+- `patch(pool, id, data)`: memperbarui field yang tersedia. `COALESCE(parameter, kolom)` mempertahankan nilai lama saat parameter tidak diberikan. Harga memakai Decimal dan tetap disimpan pada kolom `NUMERIC`.
+- `hapus(pool, id)`: DELETE memakai `RETURNING id`; `fetch_optional` memberi tahu apakah baris terhapus. Hasil `is_some()` menjadi `true` jika ada dan `false` jika ID tidak ditemukan.
 
-## `fetch_one` vs `fetch_optional`
-`fetch_one` cocok bila hasil satu baris wajib ada; jika tidak ada, operasi error. `fetch_optional` cocok untuk pencarian berdasarkan ID karena tidak ditemukan adalah kondisi yang perlu ditangani menjadi HTTP 404, bukan selalu dianggap error database.
+Semua fungsi database bersifat `async`, mengembalikan `Result`, dan meneruskan error SQLx dengan `?`.
 
-Kolom harga di PostgreSQL menggunakan NUMERIC, sedangkan field harga pada struct Rust saya menggunakan f64. Karena tipe datanya berbeda, saya menggunakan ::float8 pada query untuk mengonversi nilai hasil query menjadi tipe yang sesuai dengan f64 di Rust.
+## Perubahan tipe harga
 
-NUMERIC adalah tipe data PostgreSQL untuk menyimpan angka dengan presisi desimal yang dapat ditentukan. Tipe ini cocok untuk harga karena angka desimalnya bisa disimpan secara tepat dalam batas presisi yang ditentukan.
-
-Karena operasi DELETE bertujuan menghapus data, bukan mengambil baris-baris data. Oleh karena itu, saya menggunakan .execute(pool), sedangkan .fetch_all(pool) digunakan ketika ingin mengambil semua baris hasil query.
-
-Saya menggunakan if/else karena variabel terhapus sudah berupa boolean, sehingga hanya perlu memeriksa apakah nilainya true atau false. Error database ditangani secara terpisah. Sebenarnya match juga bisa digunakan, tetapi if/else lebih sederhana untuk kondisi ini.
+Harga sebelumnya menggunakan `f64` di model dan input. Sekarang `Barang`, `BarangBaru`, dan `BarangUpdate` memakai `Decimal`. Query SELECT/RETURNING juga tidak lagi meng-cast `NUMERIC` menjadi `float8`. Format tampilan rupiah dilakukan di View, bukan di model.

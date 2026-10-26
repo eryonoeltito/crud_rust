@@ -108,6 +108,7 @@ Hasil yang diharapkan:
 
 - Status: `200 OK`
 - Response berisi daftar barang dari database.
+- Setiap barang berupa objek bernama, misalnya `{"id":1,"nama":"Monitor","stok":10,"harga":"Rp1.500.000,00"}`.
 
 **Tujuan:** membuktikan bahwa cookie session dikirim kembali saat mengakses endpoint yang dilindungi.
 
@@ -177,6 +178,8 @@ curl -i -b cookies.txt \
 ```
 
 PATCH digunakan untuk mengubah hanya field yang dikirim. Field lain yang tidak dikirim seharusnya tetap seperti sebelumnya.
+
+Harga pada request tetap dikirim sebagai angka JSON, misalnya `125000.50`. Pada response API, field `harga` disajikan sebagai string nominal rupiah, misalnya `"Rp125.000,50"`. Body PATCH `{}` ditolak dengan `400 Bad Request` karena tidak memuat field yang akan diperbarui.
 
 ## 11. Menguji DELETE — menghapus barang
 

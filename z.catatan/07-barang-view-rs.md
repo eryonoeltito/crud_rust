@@ -1,55 +1,43 @@
 # 07 — `src/views/barang_view.rs`
 
-View di source ini bertugas menyusun respons JSON agar format data barang konsisten.
+View menyusun data model menjadi bentuk JSON untuk client. Respons saat ini memakai objek dengan nama field, dan harga dikirim sebagai teks nominal rupiah.
 
-## Daftar barang
-`list_barang_response` menerima `Vec<Barang>`, lalu:
-1. `into_iter()` mengonsumsi vector dan membuat iterator item.
-2. `map(|item| ...)` mengubah setiap `Barang` menjadi vector berisi ID, nama, stok, dan harga yang sudah diformat.
-3. `serde_json::json!(...)` mengubah setiap nilai menjadi nilai JSON.
-4. `collect()` mengumpulkan hasil pemetaan menjadi satu vector luar.
-5. `Json(data)` membungkus data sebagai respons JSON Axum.
+## `BarangResponse`
 
-Bentuknya adalah array dari array, misalnya:
-```json
-[[1,"Monitor",10,"Rp1.500.000,00"],[2,"Keyboard",20,"Rp250.000,00"]]
-```
+Struct response memiliki field `id`, `nama`, `stok`, dan `harga`. `Serialize` membuat struct dapat diubah Axum menjadi JSON. Field `harga` bertipe `String` karena nilainya sudah diformat, misalnya `Rp1.500.000,00`.
 
-`collect()` dibutuhkan karena `map()` menghasilkan iterator, bukan langsung `Vec`. Tanpa `collect()`, tipe data tidak cocok dengan `Json<Vec<Vec<Value>>>` yang diminta fungsi.
+Contoh satu barang:
 
-into_iter()
-
-Menyiapkan iterator untuk menghasilkan setiap struct Barang.
-
-
-
-map()
-
-Mengubah setiap Barang menjadi vector nilai JSON, misalnya [1, "Monitor", 10, "Rp1.500.000,00"].
-
-
-
-collect()
-
-Mengumpulkan semua vector barang menjadi satu Vec<Vec<Value>>.
-
-
-
-Json(data)
-
-Membungkus data tersebut menjadi respons JSON Axum yang dikirim ke pemanggil API.
-
-## Detail barang
-`detail_barang_response` menerima satu `Barang`, jadi cukup membuat satu `vec!`; tidak perlu `map()` dan `collect()` karena tidak memproses kumpulan item.
-
-## Kenapa `serde_json::Value`?
-Ini memudahkan membuat array campuran tipe—angka, teks, angka, teks—sebagai JSON. Alternatif yang lebih terstruktur adalah membuat DTO/struct response dan men-derive `Serialize`. Itu memberi nama field seperti `id`, `nama`, `stok`, `harga`, tetapi bentuk JSON akan menjadi object, bukan array posisi.
-
-Contoh object alternatif:
 ```json
 {"id":1,"nama":"Monitor","stok":10,"harga":"Rp1.500.000,00"}
 ```
-Jangan mengganti bentuk respons tanpa memastikan format array memang persyaratan guru/client.
 
-## Perbedaan penting
-`Json(...)` membuat respons JSON; `json!(...)` membuat nilai JSON di dalamnya. Keduanya bukan hal yang sama.
+## `From<Barang> for BarangResponse`
+
+Implementasi `From` mengubah satu model `Barang` menjadi DTO response. ID, nama, dan stok dipindahkan ke field yang namanya sama. Harga yang di model bertipe `Decimal` dilewatkan ke `format_nominal`, sehingga hanya representasi output yang menjadi teks rupiah.
+
+Pola `From` membuat konversi dapat dipakai kembali oleh response daftar, detail, POST, PUT, dan PATCH.
+
+## `list_barang_response`
+
+Fungsi menerima `Vec<Barang>`, mengonsumsi isinya dengan `into_iter()`, mengubah setiap item melalui `BarangResponse::from`, lalu mengumpulkan hasil menjadi `Vec<BarangResponse>`. `Json(data)` membungkus koleksi tersebut sebagai response JSON Axum.
+
+Contoh hasil:
+
+```json
+[
+  {"id":1,"nama":"Monitor","stok":10,"harga":"Rp1.500.000,00"},
+  {"id":2,"nama":"Keyboard","stok":20,"harga":"Rp250.000,00"}
+]
+```
+
+## `detail_barang_response`
+
+Fungsi menerima satu `Barang`, mengubahnya menjadi `BarangResponse`, lalu membungkusnya dengan `Json`. Fungsi yang sama dipakai oleh detail GET, POST, PUT, dan PATCH supaya semua respons satu barang memiliki bentuk konsisten.
+
+## Perubahan dari versi sebelumnya
+
+- Respons sebelumnya berupa array posisi seperti `[1,"Monitor",10,"Rp1.500.000,00"]`; bentuk itu telah dihilangkan.
+- Data tidak lagi dirakit dengan `serde_json::Value` dan `json!`. DTO terstruktur sekarang menjelaskan nama dan tipe setiap field.
+- Harga tetap diformat melalui `format_nominal`, namun sumber nilainya sekarang `Decimal`.
+- Contoh object yang dulu hanya alternatif sekarang merupakan kontrak respons aktif.

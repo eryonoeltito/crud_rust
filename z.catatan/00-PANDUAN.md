@@ -1,6 +1,6 @@
 # Panduan Catatan Kode Inventaris
 
-Catatan ini mengikuti source dalam `inventaris_api_aman(1).zip` yang diperiksa 20 Oktober 2026. Fokusnya bukan cuma arti fungsi, tetapi **alasan digunakan, apa yang terjadi jika tidak digunakan, dan contoh alternatif**.
+Catatan ini mengikuti source proyek yang ada saat ini. Fokusnya bukan cuma arti fungsi, tetapi **alasan digunakan, apa yang terjadi jika tidak digunakan, dan contoh alternatif**.
 
 ## Isi catatan
 - `01-alur-aplikasi.md` — alur request dan pembagian MVC.
@@ -17,7 +17,7 @@ Catatan ini mengikuti source dalam `inventaris_api_aman(1).zip` yang diperiksa 2
 
 **File `mod.rs` sengaja tidak dibuatkan catatan**, sesuai permintaan. File itu tetap disebut seperlunya bila dibutuhkan untuk memahami cara modul dipanggil.
 
-> Batasan: ZIP ini tidak menyertakan `.env`, database, atau frontend. Catatan menjelaskan source yang ada di ZIP, bukan memastikan aplikasi sudah diuji runtime. Jangan pernah mengirim password database asli.
+> Batasan: catatan menjelaskan source aplikasi dan tidak menyertakan isi `.env`, database, atau frontend. Jangan pernah mengirim password database asli.
 
 Dokumentasi autentikasi yang dipisah per file:
 - `11-model-user.md` — penjelasan kode `models/user.rs`.

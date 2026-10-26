@@ -10,12 +10,15 @@
 | `dotenvy` | Membaca variabel dari `.env` saat development | `DATABASE_URL` harus disetel di environment secara manual |
 | `serde` dengan `derive` | `Serialize`/`Deserialize` untuk mengubah data Rust ↔ format data | Perlu implementasi serialisasi/deserialisasi manual atau library lain |
 | `serde_json` | Membuat nilai JSON lewat `json!` | Perlu membangun nilai JSON dengan cara lain |
-| `rand` | Library bilangan acak | Di source ZIP ini belum terlihat dipakai; bisa jadi sisa dependency dari percobaan sebelumnya |
+| `rust_decimal` dengan fitur `serde` | Tipe `Decimal` untuk harga dan dukungan serialisasi/deserialisasi | Harga berisiko memakai floating point; tipe ini juga memungkinkan nilai harga berpindah melalui JSON |
+| `rand` | Library bilangan acak | Di source saat ini belum terlihat dipakai; bisa jadi sisa dependency dari percobaan sebelumnya |
+
+Fitur `rust_decimal` pada `sqlx` mengaktifkan pemetaan `Decimal` dengan tipe `NUMERIC` PostgreSQL.
 
 Contoh `serde`:
 ```rust
 #[derive(Deserialize)]
-struct BarangBaru { nama: String, stok: i32, harga: f64 }
+struct BarangBaru { nama: String, stok: i32, harga: Decimal }
 ```
 Axum dapat membaca JSON request menjadi `BarangBaru` karena tipe tersebut mengimplementasikan `Deserialize`.
 

@@ -1,49 +1,42 @@
 # 08 — `src/views/format.rs`: format harga
 
-Fungsi `format_nominal(harga: f64) -> String` mengubah angka menjadi teks dengan pemisah ribuan titik dan desimal koma. Contoh: `1500000.0` → `Rp1.500.000,00`.
+Fungsi `format_nominal(harga: Decimal) -> String` mengubah nilai harga bertipe `rust_decimal::Decimal` menjadi teks rupiah. Contoh: `1500000` menjadi `Rp1.500.000,00` dan `1500.5` menjadi `Rp1.500,50`.
 
-## Alur per bagian
-```rust
-let nominal = format!("{:.2}", harga);
-```
-Mengubah angka menjadi teks dengan dua angka di belakang koma. Tanpa format `:.2`, angka bisa tampil dengan jumlah digit desimal yang berbeda-beda.
+## Alur fungsi
 
 ```rust
-let bagian: Vec<&str> = nominal.split('.').collect();
-let angka = bagian[0];
-let desimal = bagian[1];
+let nominal = format!("{harga:.2}");
 ```
-`split('.')` membagi teks pada titik desimal, `collect()` mengumpulkan potongan ke `Vec`, indeks 0 mengambil bagian bilangan bulat, indeks 1 mengambil desimal. Ini mengasumsikan hasil `format!("{:.2}", harga)` selalu mengandung titik sebagai pemisah desimal pada format Rust ini.
+
+Memformat `Decimal` dengan tepat dua angka desimal. Tipe `Decimal` menjaga representasi desimal uang tanpa memakai pendekatan floating point `f64`.
 
 ```rust
-let mut hasil = String::new();
-for (i, digit) in angka.chars().rev().enumerate() {
-    if i > 0 && i % 3 == 0 { hasil.push('.'); }
-    hasil.push(digit);
-}
+let (angka, desimal) = nominal.split_once('.').expect(...);
 ```
-- `String::new()` membuat string kosong.
-- `chars()` mengambil karakter.
-- `rev()` membalik urutan supaya pengelompokan dimulai dari digit paling kanan.
-- `enumerate()` memberi indeks mulai dari 0.
-- `i > 0 && i % 3 == 0` berarti setelah tiga digit, enam digit, dan seterusnya, tambahkan titik. `&&` berarti kedua syarat harus benar.
-- `push()` menambahkan karakter ke string.
+
+Memisahkan bagian bilangan bulat dan pecahan. Format `:.2` menjamin dua digit pecahan, sehingga hasil memiliki titik pemisah pada teks format Rust.
+
+Fungsi kemudian memisahkan tanda minus bila ada, membalik digit bilangan bulat, dan menambahkan titik setiap tiga digit. Setelah digit dibalik kembali, fungsi menyusun hasil akhir:
 
 ```rust
-let angka_format: String = hasil.chars().rev().collect();
-format!("Rp{},{}", angka_format, desimal)
+format!("{tanda}Rp{angka_format},{desimal}")
 ```
-Membalik kembali hasil agar urutan angka normal, lalu menyusun teks dengan awalan Rp dan desimal koma.
 
-## Mengapa tidak sekadar `format!("Rp {}", harga)`?
-Cara singkat itu bisa menghasilkan format seperti `Rp 1500000` atau `Rp 1500000.0`, bukan format lokal yang diinginkan. Fungsi khusus memastikan tampilan seragam.
+Titik dipakai sebagai pemisah ribuan dan koma sebagai pemisah desimal sesuai format rupiah yang digunakan aplikasi. Nilai negatif juga tetap menampilkan tanda minus sebelum `Rp`.
 
-## Alternatif
-- Untuk latihan, fungsi manual ini memperlihatkan cara kerja string dan iterator.
-- Untuk aplikasi keuangan yang lebih serius, gunakan library formatting locale/currency yang teruji dan tipe decimal untuk uang. `f64` dapat memiliki persoalan presisi biner.
+## Di mana fungsi dipakai?
 
-## Catatan source saat ini
-Format akhirnya `format!("Rp{},{}", angka_format, desimal)`, sehingga tidak ada spasi setelah `Rp`. Jika guru menginginkan `Rp 1.500.000,00`, ubah menjadi `format!("Rp {},{}", angka_format, desimal)`.
+`BarangResponse::from` di `src/views/barang_view.rs` memanggil `format_nominal(item.harga)`. Pemformatan hanya terjadi pada lapisan response; model dan query database tetap memakai `Decimal`.
 
-## Kesalahan yang perlu dihindari
-Mengakses `bagian[1]` akan panic jika teks tidak punya bagian kedua. Pada fungsi ini, `format!("{:.2}", harga)` menjamin dua digit desimal dan pemisah titik dalam output Rust, tetapi jika suatu saat sumber teks berubah, pendekatan indeks perlu ditinjau ulang.
+Karena field `harga` pada response bertipe `String`, JSON berisi teks, misalnya:
+
+```json
+{"id":1,"nama":"Monitor","stok":10,"harga":"Rp1.500.000,00"}
+```
+
+## Perubahan dari versi sebelumnya
+
+- Parameter sebelumnya bertipe `f64`; sekarang `Decimal` agar sesuai dengan model harga dan menghindari floating point untuk uang.
+- Format sebelumnya mengasumsikan angka selalu nonnegatif; versi sekarang juga mempertahankan tanda minus.
+- Pemisahan memakai `split_once` alih-alih membuat `Vec` dan mengakses indeks `bagian[0]` serta `bagian[1]`.
+- Contoh DTO objek JSON yang sebelumnya hanya disebut sebagai alternatif kini menjadi bentuk respons yang digunakan.

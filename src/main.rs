@@ -1,15 +1,10 @@
-
-mod models;
 mod controllers;
-mod views;
-mod routes;
 mod middleware;
+mod models;
+mod routes;
+mod views;
 
-use axum::{
-    routing::get,
-    Json,
-    Router,
-};
+use axum::{Json, Router, routing::get};
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
@@ -21,8 +16,8 @@ use crate::routes::{auth_routes, barang_routes};
 async fn main() {
     dotenvy::dotenv().ok();
 
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL tidak ditemukan di file .env");
+    let database_url =
+        std::env::var("DATABASE_URL").expect("DATABASE_URL tidak ditemukan di file .env");
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -62,5 +57,3 @@ async fn health_check() -> Json<serde_json::Value> {
         "message": "API inventaris berhasil berjalan"
     }))
 }
-
-
