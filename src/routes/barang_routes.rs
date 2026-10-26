@@ -1,5 +1,6 @@
 use axum::{
-    Router, middleware,
+    Router,
+    middleware,
     routing::{get, put},
 };
 use sqlx::PgPool;
