@@ -81,3 +81,40 @@ Dengan `MemoryStore`, server mencari session berdasarkan ID cookie. Jadi jika cl
 ## Perhatian
 
 Dokumentasi ini menjelaskan konfigurasi yang digunakan dalam proyek. Periksa lagi source aktif sebelum mengubah versi crate atau pengaturan expiry, karena API crate dapat berubah antarversi.
+
+
+ Analogi: main.rs adalah tempat kamu memasang sistem keamanan gedung. Route menentukan pintunya, session adalah kartu aksesnya, dan middleware adalah petugas yang memeriksa kartu tersebut.
+
+ #[derive(Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
+}
+Analogi hotel: kamu datang ke resepsionis dan menyebutkan nama serta memberikan informasi untuk membuktikan identitasmu.
+
+.route("/login", post(auth_controller::login))
+ Analogi hotel: kamu memberi tahu petugas bahwa kamu ingin melakukan check-in. Petugas mengarahkanmu ke bagian yang menangani pendaftaran tamu.
+
+pub async fn login(
+    State(pool): State<PgPool>,
+    session: Session,
+    Json(input): Json<LoginRequest>,
+) -> axum::response::Response {
+}
+ Analogi: petugas memiliki formulir pendaftaran, akses ke sistem data, dan fasilitas untuk mencatat status tamu. Ketiganya diperlukan untuk memproses check-in.
+
+ User::cek_login(&pool, &input.username, &input.password)
+ Analogi hotel: petugas memeriksa sistem pendaftaran untuk memastikan nama dan informasi identitas yang diberikan cocok dengan catatan.
+
+ Jika valid == false
+
+Username atau password tidak cocok. Server mengirim status 401 Unauthorized.
+
+Karena ada return, fungsi berhenti di sini. Program tidak melanjutkan ke proses session.insert().
+
+Jika valid == true
+
+Kredensial cocok. Kondisi if !valid tidak dijalankan, sehingga program melanjutkan ke proses berikutnya: membuat atau memperbarui data session.
+
+
+Analogi hotel: jika identitas tidak cocok, petugas menolak check-in. Kalau identitas cocok, petugas melanjutkan proses pencatatan tamu.
