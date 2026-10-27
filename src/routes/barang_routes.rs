@@ -12,7 +12,8 @@ pub fn routes() -> Router<PgPool> {
     Router::new()
         .route(
             "/barang",
-            get(barang_controller::list_barang).post(barang_controller::buat_barang),
+            get(barang_controller::list_barang)
+            .post(barang_controller::buat_barang),
         )
         .route(
             "/barang/{id}",
