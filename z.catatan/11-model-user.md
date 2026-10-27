@@ -1,6 +1,6 @@
 # 11 — Penjelasan kode `src/models/user.rs`
 
-Dokumen ini menjelaskan fungsi setiap bagian kode model `User` untuk pemeriksaan login. Nama file sumber: `src/models/user.rs`.
+Dokumen ini menjelaskan fungsi setiap bagian kode model `User` untuk pendaftaran dan pemeriksaan login. Nama file sumber: `src/models/user.rs`.
 
 ## Kode sumber dengan penjelasan
 
@@ -22,6 +22,54 @@ impl User {
 ```
 - `impl User` menuliskan fungsi yang terkait dengan tipe `User`.
 - Kurung kurawal membuka blok implementasi.
+
+## Fungsi `register`
+
+```rust
+    pub async fn register(
+        pool: &PgPool,
+        username: &str,
+        password: &str,
+    ) -> Result<bool, sqlx::Error> {
+```
+- Fungsi asinkron ini menerima pool database dan kredensial baru.
+- `Result<bool, sqlx::Error>` berarti `Ok(true)` jika akun berhasil dibuat, `Ok(false)` jika username sudah ada, atau `Err(...)` jika query database gagal.
+
+```rust
+        let username_exists = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (SELECT 1 FROM users WHERE username = $1)",
+        )
+        .bind(username)
+        .fetch_one(pool)
+        .await?;
+```
+- `SELECT EXISTS` memeriksa apakah tabel `users` sudah memiliki username tersebut.
+- `.bind(username)` mengikat nilai ke placeholder `$1` sehingga nilainya tidak digabung ke SQL secara langsung.
+- `.fetch_one(pool).await?` menjalankan query dan meneruskan error SQLx ke pemanggil jika query gagal.
+
+```rust
+        if username_exists {
+            return Ok(false);
+        }
+```
+- Jika username sudah terdaftar, fungsi berhenti tanpa menjalankan `INSERT` dan memberi hasil `Ok(false)`.
+
+```rust
+        sqlx::query("INSERT INTO users (username, password) VALUES ($1, $2)")
+            .bind(username)
+            .bind(password)
+            .execute(pool)
+            .await?;
+
+        Ok(true)
+    }
+```
+- `INSERT` menambahkan username dan password ke tabel `users`.
+- `.bind(...)` mengikat kedua nilai ke placeholder `$1` dan `$2`.
+- `.execute(pool).await?` menjalankan perintah tanpa mengambil baris hasil dan meneruskan error jika gagal.
+- Setelah insert berhasil, `Ok(true)` menandakan akun dibuat.
+
+Pemeriksaan username dilakukan sebelum insert. Jika database tidak memiliki batasan unik pada kolom `username`, dua request bersamaan masih dapat melewati pemeriksaan ini dan membuat username yang sama.
 
 ```rust
     pub async fn cek_login(
@@ -80,10 +128,10 @@ impl User {
 
 ## Alur singkat
 
-1. Controller memberikan pool, username, dan password ke `User::cek_login`.
-2. Model memeriksa tabel `users`.
-3. Jika pasangan kredensial ditemukan, hasilnya `Ok(true)`.
-4. Jika tidak ditemukan, hasilnya `Ok(false)`.
+1. Untuk pendaftaran, controller memberikan pool, username, dan password ke `User::register`.
+2. Model memeriksa apakah username sudah dipakai, lalu memasukkan akun baru jika belum.
+3. Untuk login, controller memberikan kredensial ke `User::cek_login` dan model memeriksa tabel `users`.
+4. Pemeriksaan login menghasilkan `Ok(true)` jika pasangan kredensial cocok dan `Ok(false)` jika tidak cocok.
 5. Jika query gagal, fungsi mengembalikan error SQLx.
 
 ## Catatan keamanan

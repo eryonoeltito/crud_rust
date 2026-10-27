@@ -1,6 +1,6 @@
 # 12 — Penjelasan kode `src/controllers/auth_controller.rs`
 
-Controller ini menangani request login dan logout. Penjelasan mengikuti struktur implementasi session yang digunakan dalam proyek.
+Controller ini menangani request register, login, dan logout. Penjelasan mengikuti struktur implementasi session yang digunakan dalam proyek.
 
 ## Import dan tipe request
 
@@ -21,6 +21,100 @@ use crate::models::user::User;
 - `PgPool`: tipe pool koneksi PostgreSQL.
 - `Session`: tipe session dari `tower-sessions`.
 - `User`: model yang menyediakan fungsi pemeriksaan kredensial.
+
+## Bentuk body register
+
+```rust
+#[derive(Deserialize)]
+pub struct RegisterRequest {
+    pub username: String,
+    pub password: String,
+}
+```
+
+- `RegisterRequest` adalah bentuk data JSON untuk pendaftaran akun.
+- `username` dan `password` berisi kredensial yang dikirim client.
+- `Deserialize` memungkinkan Axum mengubah JSON request menjadi struct ini.
+
+Contoh body untuk `POST /register`:
+
+```json
+{"username":"pengguna_baru","password":"rahasia123"}
+```
+
+## Handler `register`
+
+```rust
+pub async fn register(
+    State(pool): State<PgPool>,
+    Json(input): Json<RegisterRequest>,
+) -> axum::response::Response {
+```
+- `State(pool)` mengambil pool PostgreSQL dari state router.
+- `Json(input)` membaca body JSON dan mengubahnya menjadi `RegisterRequest`.
+- Handler mengembalikan response HTTP dengan body JSON.
+
+```rust
+    if input.username.trim().is_empty() || input.password.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Username dan password wajib diisi"
+            })),
+        )
+            .into_response();
+    }
+```
+- Username yang kosong atau hanya berisi spasi dan password kosong ditolak dengan `400 Bad Request`.
+- `trim()` hanya digunakan untuk memeriksa username; nilai input tidak diubah sebelum disimpan.
+
+```rust
+    let registered = match User::register(&pool, &input.username, &input.password).await {
+        Ok(registered) => registered,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "status": "error",
+                    "message": "Terjadi kesalahan pada server"
+                })),
+            )
+                .into_response();
+        }
+    };
+```
+- `User::register(...)` meminta model mengecek username dan menyimpan akun jika tersedia.
+- `Ok(registered)` berisi `true` bila akun berhasil dibuat atau `false` jika username sudah digunakan.
+- Error database ditangani dengan respons `500 Internal Server Error`; detail internal tidak dikirim ke client.
+
+```rust
+    if !registered {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "status": "error",
+                "message": "Username sudah digunakan"
+            })),
+        )
+            .into_response();
+    }
+```
+- Jika hasil model `false`, handler mengembalikan `409 Conflict` karena username telah dipakai.
+
+```rust
+    (
+        StatusCode::CREATED,
+        Json(json!({
+            "status": "success",
+            "message": "Pendaftaran berhasil"
+        })),
+    )
+        .into_response()
+}
+```
+- Jika akun berhasil dibuat, handler mengembalikan `201 Created` dan pesan sukses.
+- Pendaftaran tidak membuat session; pengguna dapat melakukan login melalui handler `login`.
 
 ## Bentuk body login
 
@@ -169,6 +263,9 @@ pub async fn logout(
 
 | Kondisi | Status |
 |---|---:|
+| Data register kosong | `400 Bad Request` |
+| Username register sudah dipakai | `409 Conflict` |
+| Register berhasil | `201 Created` |
 | Login berhasil | `200 OK` |
 | Username/password tidak cocok | `401 Unauthorized` |
 | Query database atau operasi session gagal | `500 Internal Server Error` |

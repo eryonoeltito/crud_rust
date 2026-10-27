@@ -13,7 +13,7 @@ use crate::controllers::auth_controller;
 - `routing::post`: fungsi untuk mendaftarkan route yang menerima metode HTTP POST.
 - `Router`: tipe router Axum untuk menyusun daftar route.
 - `PgPool`: tipe state aplikasi berupa pool database PostgreSQL.
-- `auth_controller`: modul yang berisi handler login dan logout.
+- `auth_controller`: modul yang berisi handler register, login, dan logout.
 
 ```rust
 pub fn routes() -> Router<PgPool> {
@@ -24,11 +24,13 @@ pub fn routes() -> Router<PgPool> {
 
 ```rust
     Router::new()
+        .route("/register", post(auth_controller::register))
         .route("/login", post(auth_controller::login))
         .route("/logout", post(auth_controller::logout))
 }
 ```
 - `Router::new()` membuat router kosong.
+- `.route("/register", post(auth_controller::register))` menghubungkan `POST /register` ke handler pendaftaran akun.
 - `.route("/login", post(auth_controller::login))` menghubungkan `POST /login` ke fungsi `login`.
 - `.route("/logout", post(auth_controller::logout))` menghubungkan `POST /logout` ke fungsi `logout`.
 - `}` menutup fungsi.
@@ -41,5 +43,6 @@ Pengguna belum memiliki session saat hendak login. Karena itu route autentikasi 
 
 | Metode | Path | Fungsi |
 |---|---|---|
+| `POST` | `/register` | Mendaftarkan akun baru |
 | `POST` | `/login` | Memeriksa kredensial dan membuat session |
 | `POST` | `/logout` | Mengakhiri session aktif |

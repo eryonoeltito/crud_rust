@@ -13,6 +13,62 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+#[derive(Deserialize)]
+pub struct RegisterRequest {
+    pub username: String,
+    pub password: String,
+}
+
+pub async fn register(
+    State(pool): State<PgPool>,
+    Json(input): Json<RegisterRequest>,
+) -> axum::response::Response {
+    if input.username.trim().is_empty() || input.password.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Username dan password wajib diisi"
+            })),
+        )
+            .into_response();
+    }
+
+    let registered = match User::register(&pool, &input.username, &input.password).await {
+        Ok(registered) => registered,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "status": "error",
+                    "message": "Terjadi kesalahan pada server"
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    if !registered {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "status": "error",
+                "message": "Username sudah digunakan"
+            })),
+        )
+            .into_response();
+    }
+
+    (
+        StatusCode::CREATED,
+        Json(json!({
+            "status": "success",
+            "message": "Pendaftaran berhasil"
+        })),
+    )
+        .into_response()
+}
+
 pub async fn login(
     State(pool): State<PgPool>,
     session: Session,
