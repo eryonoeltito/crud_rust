@@ -1,4 +1,5 @@
 mod controllers;
+mod database;
 mod middleware;
 mod models;
 mod routes;
@@ -26,6 +27,11 @@ async fn main() {
         .expect("Gagal terhubung ke PostgreSQL");
 
     println!("Berhasil terhubung ke PostgreSQL!");
+
+    database::initialize(&pool)
+        .await
+        .unwrap_or_else(|error| panic!("Inisialisasi database gagal: {error}"));
+    println!("Tabel `barang` dan `users` siap digunakan.");
 
     let session_store = MemoryStore::default();
 

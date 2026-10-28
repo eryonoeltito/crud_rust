@@ -6,6 +6,7 @@ Catatan ini mengikuti source proyek yang ada saat ini. Fokusnya bukan cuma arti 
 - `01-alur-aplikasi.md` — alur request dan pembagian MVC.
 - `02-cargo-toml.md` — dependencies dan alasan pemilihan.
 - `03-main-rs.md` — menjalankan server, pool database, state, router, port.
+- `17-database-rs.md` — inisialisasi tabel `barang` dan `users` saat startup.
 - `04-barang-rs.md` — model, validasi, query SQLx, parameter binding.
 - `05-barang-controller-rs.md` — handler, validasi, status HTTP, error.
 - `06-barang-routes-rs.md` — endpoint dan HTTP method.
@@ -13,7 +14,6 @@ Catatan ini mengikuti source proyek yang ada saat ini. Fokusnya bukan cuma arti 
 - `08-format-rs.md` — format harga rupiah.
 - `09-gitignore.md` — melindungi file lokal seperti `.env` dari Git.
 - `10-ringkasan-crud.md` — tabel endpoint dan alur.
-- `11-latihan-pkl.md` — pertanyaan latihan beserta arah jawaban.
 
 **File `mod.rs` sengaja tidak dibuatkan catatan**, sesuai permintaan. File itu tetap disebut seperlunya bila dibutuhkan untuk memahami cara modul dipanggil.
 

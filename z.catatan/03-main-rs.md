@@ -33,7 +33,14 @@ Pool mengelola sekumpulan koneksi agar setiap request tidak perlu membuka koneks
 
 **max_connections(5)** membatasi maksimal lima koneksi database yang dapat digunakan secara bersamaan. Jadi, bukan membatasi jumlah pengguna atau request. Jika semua koneksi sedang digunakan, request yang membutuhkan koneksi database akan menunggu sampai ada koneksi yang tersedia.
 
-## 4. Router dan state
+## 4. Inisialisasi tabel
+Setelah pool berhasil terhubung, `main` memanggil `database::initialize(&pool).await`. Fungsi tersebut berada di `src/database.rs` dan memakai pool yang sama untuk menjalankan `CREATE TABLE IF NOT EXISTS` bagi tabel `barang` dan `users`.
+
+Inisialisasi terjadi sebelum router, TCP listener, dan server Axum dijalankan. Jika salah satu perintah gagal, startup berhenti dengan pesan yang menyebut tabel dan detail error SQLx. Rincian kolom serta batasan `CREATE TABLE IF NOT EXISTS` dijelaskan di [17-database-rs.md](17-database-rs.md).
+
+Tabel `riwayat_stok` tidak dibuat oleh inisialisasi ini karena source aplikasi saat ini tidak memiliki query atau model yang menggunakannya dan DDL-nya belum tersedia.
+
+## 5. Router dan state
 ```rust
 let app = Router::new()
     .route("/health", get(health_check))
@@ -55,7 +62,7 @@ Router menerima request HTTP dan menentukan handler mana yang akan dijalankan be
 
 Jadi, alasan utama menggunakan with_state(pool) pada project kamu adalah agar handler dapat mengakses pool yang sudah disiapkan, tanpa harus membuat koneksi database sendiri berulang kali.
 
-## 5. TCP listener dan port
+## 6. TCP listener dan port
 ```rust
 let listener = TcpListener::bind("127.0.0.1:3000").await?;
 axum::serve(listener, app).await?;
@@ -68,5 +75,5 @@ axum::serve berfungsi untuk menjalankan server HTTP Axum menggunakan TcpListener
 
 Ingat, bro: TcpListener menunggu koneksi, axum::serve menjalankan layanan server, sedangkan router menentukan handler yang sesuai.
 
-## 6. Health check
+## 7. Health check
 `GET /health` mengembalikan JSON status dan pesan. Endpoint ini membantu mengecek apakah server merespons, tetapi **tidak otomatis membuktikan semua query database berhasil**.
