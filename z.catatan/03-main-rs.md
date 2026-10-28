@@ -62,12 +62,14 @@ Router menerima request HTTP dan menentukan handler mana yang akan dijalankan be
 
 Jadi, alasan utama menggunakan with_state(pool) pada project kamu adalah agar handler dapat mengakses pool yang sudah disiapkan, tanpa harus membuat koneksi database sendiri berulang kali.
 
-## 6. TCP listener dan port
+## 6. TCP listener dan alamat dari `.env`
 ```rust
-let listener = TcpListener::bind("127.0.0.1:3000").await?;
+let app_host = std::env::var("APP_HOST").expect("APP_HOST tidak ditemukan di file .env");
+let app_port = std::env::var("APP_PORT")?.parse::<u16>()?;
+let listener = TcpListener::bind((app_host.as_str(), app_port)).await?;
 axum::serve(listener, app).await?;
 ```
-Listener membuka alamat lokal pada port 3000; `axum::serve` mulai menerima request menggunakan listener tersebut. Port 3000 dapat diganti jika port itu bebas dan alamatnya sesuai kebutuhan. `127.0.0.1` hanya menerima koneksi dari komputer sendiri; jika perlu diakses dari perangkat lain, alamat bind harus dipertimbangkan dan diamankan.
+`APP_HOST` dan `APP_PORT` dibaca dari environment setelah `.env` dimuat. Contoh nilainya ada di `.env.example`; salin file itu ke `.env`, lalu sesuaikan alamat dan port. Port harus berupa angka yang valid. `TcpListener::bind` membuka alamat tersebut dan `axum::serve` mulai menerima request. `127.0.0.1` hanya menerima koneksi dari komputer sendiri; jika perlu diakses dari perangkat lain, alamat bind harus dipertimbangkan dan diamankan.
 
 Jika port sudah dipakai program lain, `bind` gagal. Server tidak berjalan hanya karena router sudah dibuat—listener dan `serve` diperlukan agar request benar-benar diterima.
 

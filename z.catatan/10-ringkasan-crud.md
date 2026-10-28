@@ -25,6 +25,6 @@ Contoh bentuk respons barang:
 
 PATCH harus memuat setidaknya satu field dari `nama`, `stok`, atau `harga`. Body `{}` mendapatkan `400 Bad Request`. Field yang tidak disertakan pada PATCH tetap memakai nilai lama.
 
-Ganti port/alamat sesuai tempat server berjalan. Pada source ini server bind ke `127.0.0.1:3000`.
+Ganti port/alamat sesuai nilai `APP_HOST` dan `APP_PORT` pada `.env`. Nilai contoh pada `.env.example` adalah `127.0.0.1:3000`.
 
 "Request masuk lewat route, route memilih controller. Controller membaca input dan memvalidasi, lalu memanggil model untuk query database. Hasil query ditangani controller, disusun menjadi objek JSON oleh view bila digunakan, kemudian dikirim sebagai respons dengan status HTTP yang sesuai."

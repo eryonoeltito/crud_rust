@@ -46,11 +46,22 @@ async fn main() {
         .with_state(pool)
         .layer(session_layer);
 
-    let listener = TcpListener::bind("127.0.0.1:3000")
-        .await
-        .expect("Gagal membuka port");
+    let app_host = std::env::var("HOST").expect("HOST tidak ditemukan di file .env");
+    let app_port = std::env::var("PORT")
+        .expect("PORT tidak ditemukan di file .env")
+        .parse::<u16>()
+        .expect("PORT harus berupa angka antara 0 hingga 65535");
 
-    println!("Server berjalan di http://127.0.0.1:3000");
+    let listener = TcpListener::bind((app_host.as_str(), app_port))
+        .await
+        .unwrap_or_else(|error| {
+            panic!("Gagal membuka listener pada {app_host}:{app_port}: {error}")
+        });
+
+    let address = listener
+        .local_addr()
+        .expect("Gagal membaca alamat listener");
+    println!("Server berjalan di http://{address}");
 
     axum::serve(listener, app)
         .await
