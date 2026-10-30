@@ -46,11 +46,11 @@ async fn main() {
         .with_state(pool)
         .layer(session_layer);
 
-    let app_host = std::env::var("HOST").expect("HOST tidak ditemukan di file .env");
-    let app_port = std::env::var("PORT")
-        .expect("PORT tidak ditemukan di file .env")
+    let app_host = std::env::var("APP_HOST").expect("APP_HOST tidak ditemukan di file .env");
+    let app_port = std::env::var("APP_PORT")
+        .expect("APP_PORT tidak ditemukan di file .env")
         .parse::<u16>()
-        .expect("PORT harus berupa angka antara 0 hingga 65535");
+        .expect("APP_PORT harus berupa angka antara 0 hingga 65535");
 
     let listener = TcpListener::bind((app_host.as_str(), app_port))
         .await
