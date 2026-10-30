@@ -64,12 +64,12 @@ Jadi, alasan utama menggunakan with_state(pool) pada project kamu adalah agar ha
 
 ## 6. TCP listener dan alamat dari `.env`
 ```rust
-let app_host = std::env::var("APP_HOST").expect("APP_HOST tidak ditemukan di file .env");
-let app_port = std::env::var("APP_PORT")?.parse::<u16>()?;
+let app_host = std::env::var("HOST").expect("APP_HOST tidak ditemukan di file .env");
+let app_port = std::env::var("PORT")?.parse::<u16>()?;
 let listener = TcpListener::bind((app_host.as_str(), app_port)).await?;
 axum::serve(listener, app).await?;
 ```
-`APP_HOST` dan `APP_PORT` dibaca dari environment setelah `.env` dimuat. Contoh nilainya ada di `.env.example`; salin file itu ke `.env`, lalu sesuaikan alamat dan port. Port harus berupa angka yang valid. `TcpListener::bind` membuka alamat tersebut dan `axum::serve` mulai menerima request. `127.0.0.1` hanya menerima koneksi dari komputer sendiri; jika perlu diakses dari perangkat lain, alamat bind harus dipertimbangkan dan diamankan.
+`HOST` dan `PORT` dibaca dari environment setelah `.env` dimuat. Contoh nilainya ada di `.env.example`; salin file itu ke `.env`, lalu sesuaikan alamat dan port. Port harus berupa angka yang valid. `TcpListener::bind` membuka alamat tersebut dan `axum::serve` mulai menerima request. `127.0.0.1` hanya menerima koneksi dari komputer sendiri; jika perlu diakses dari perangkat lain, alamat bind harus dipertimbangkan dan diamankan.
 
 Jika port sudah dipakai program lain, `bind` gagal. Server tidak berjalan hanya karena router sudah dibuat—listener dan `serve` diperlukan agar request benar-benar diterima.
 
