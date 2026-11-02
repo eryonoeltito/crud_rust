@@ -16,7 +16,7 @@ Setelah pool tersambung, `database::initialize(&pool)` di `src/database.rs` memb
 
 `CREATE TABLE IF NOT EXISTS` hanya membuat tabel yang belum ada. Perintah tersebut tidak memperbaiki atau menyelaraskan kolom pada tabel lama. Jika inisialisasi gagal, aplikasi berhenti sebelum server menerima request. Dengan demikian, server tidak mulai melayani API dalam keadaan schema yang diharapkan belum siap.
 
-> Catatan keamanan: implementasi model pengguna saat ini menyimpan dan membandingkan password secara langsung sebagai teks. Untuk penggunaan nyata, password sebaiknya disimpan sebagai hash yang dibuat dengan algoritma khusus password, bukan sebagai teks biasa.
+Password pengguna disimpan sebagai hash Argon2, bukan sebagai teks biasa. Akun lama yang masih berisi teks biasa tidak dapat login setelah perubahan ini. Sebelum pengguna lama mendaftar ulang dengan username yang sama, administrator perlu menghapus baris akun lama dari tabel `users`; aplikasi tidak menghapus data pengguna secara otomatis.
 
 ## Alur singkat
 

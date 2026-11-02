@@ -4,12 +4,12 @@ Autentikasi memastikan pengguna memiliki akun dan dapat membuktikan identitas se
 
 ## Registrasi
 
-`POST /register` menerima JSON dengan `username` dan `password`. Handler menolak username kosong atau password kosong dengan `400 Bad Request`. Model memeriksa apakah username telah dipakai; jika sudah, API merespons `409 Conflict`. Jika belum, akun disimpan dan API mengembalikan `201 Created`.
+`POST /register` menerima JSON dengan `username` dan `password`. Handler menolak username kosong atau password kosong dengan `400 Bad Request`. Model memeriksa apakah username telah dipakai; jika sudah, API merespons `409 Conflict`. Jika belum, model membuat hash Argon2 dengan salt unik dan menyimpan hash tersebut, lalu API mengembalikan `201 Created`.
 
 ## Alur login
 
 1. Client mengirim `POST /login` dengan JSON username dan password.
-2. Handler meminta model memeriksa kredensial.
+2. Handler meminta model mengambil hash password akun dan memverifikasi password yang dikirim menggunakan Argon2.
 3. Jika tidak cocok, API mengembalikan `401 Unauthorized`.
 4. Jika cocok, handler menyimpan username ke session dan mengembalikan respons berhasil. Session layer mengelola penyimpanan session serta mengirim cookie pengenal session kepada client.
 
@@ -27,4 +27,4 @@ Client mengirim `POST /logout` dengan cookie session. Handler menghapus data ses
 
 Route autentikasi tidak dipasang di dalam lapisan perlindungan route barang, agar pengguna yang belum login tetap dapat mengakses endpoint login. Cara session dan middleware bekerja dijelaskan pada [07 — Session, Cookie, dan Middleware](../07-session-cookie-middleware/README.md).
 
-> Catatan keamanan: model `User` pada source saat ini membandingkan password secara langsung dengan teks yang tersimpan. Ini cocok hanya sebagai implementasi pembelajaran; aplikasi nyata perlu menyimpan hash password dengan algoritma khusus password dan tidak mencatat kredensial ke log.
+

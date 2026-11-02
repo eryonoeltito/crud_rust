@@ -47,6 +47,7 @@ async fn main() {
         .layer(session_layer);
 
     let app_host = std::env::var("APP_HOST").expect("APP_HOST tidak ditemukan di file .env");
+    
     let app_port = std::env::var("APP_PORT")
         .expect("APP_PORT tidak ditemukan di file .env")
         .parse::<u16>()
