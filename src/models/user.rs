@@ -24,30 +24,24 @@ impl User {
         username: &str,
         password: &str,
     ) -> Result<bool, UserError> {
-        let username_exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS (SELECT 1 FROM users WHERE username = $1)",
-        )
-        .bind(username)
-        .fetch_one(pool)
-        .await?;
-
-        if username_exists {
-            return Ok(false);
-        }
-
         let salt = SaltString::generate(&mut OsRng);
         let password_hash = Argon2::default()
             .hash_password(password.as_bytes(), &salt)
             .map_err(|_| UserError::PasswordHash)?
             .to_string();
 
-        sqlx::query("INSERT INTO users (username, password) VALUES ($1, $2)")
-            .bind(username)
-            .bind(password_hash)
-            .execute(pool)
-            .await?;
+        let inserted = sqlx::query_scalar::<_, i32>(
+            "INSERT INTO users (username, password)
+             VALUES ($1, $2)
+             ON CONFLICT (username) DO NOTHING
+             RETURNING 1",
+        )
+        .bind(username)
+        .bind(password_hash)
+        .fetch_optional(pool)
+        .await?;
 
-        Ok(true)
+        Ok(inserted.is_some())
     }
 
     pub async fn cek_login(
