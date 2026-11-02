@@ -1,6 +1,6 @@
 # Dokumentasi API Inventaris
 
-Dokumentasi proyek dibagi menjadi delapan bagian. Setiap bagian memiliki folder bernomor dan README yang menjelaskan topik tersebut. Susunan ini mengikuti perjalanan memahami aplikasi: konfigurasi dan koneksi terlebih dahulu, kemudian request barang, sampai proses autentikasi.
+Dokumentasi proyek dibagi menjadi sembilan bagian. Setiap bagian memiliki folder bernomor dan README yang menjelaskan topik tersebut. Susunan ini mengikuti perjalanan memahami aplikasi: konfigurasi dan koneksi terlebih dahulu, kemudian request barang, sampai proses autentikasi.
 
 | Bagian | Topik | Dokumentasi |
 |---|---|---|
@@ -11,11 +11,12 @@ Dokumentasi proyek dibagi menjadi delapan bagian. Setiap bagian memiliki folder 
 | 04 | Format Harga | [04-format-harga/README.md](04-format-harga/README.md) |
 | 05 | Objek JSON berupa JSON Array | [05-json-array/README.md](05-json-array/README.md) |
 | 06 | Login dan Logout | [06-login-logout/README.md](06-login-logout/README.md) |
-| 07 | Session, Cookie, dan Middleware | [07-session-cookie-middleware/README.md](07-session-cookie-middleware/README.md) |
+| 07 | JWT HMAC dan Middleware | [07-session-cookie-middleware/README.md](07-session-cookie-middleware/README.md) |
+| 08 | JWT HMAC | [08-jwt-hmac/README.md](08-jwt-hmac/README.md) |
 
 ## Ringkasan alur aplikasi
 
-Client (misalnya aplikasi frontend atau Postman) mengirim request HTTP ke listener. Router mencocokkan method dan alamat lalu meneruskan request ke handler yang tepat. Untuk route barang, middleware memeriksa session sebelum handler dipanggil. Handler membaca input, memvalidasi, memanggil model untuk mengakses PostgreSQL, dan membentuk respons JSON. Response dikirim kembali melalui koneksi HTTP yang sama.
+Client (misalnya aplikasi frontend atau Postman) mengirim request HTTP ke listener. Router mencocokkan method dan alamat lalu meneruskan request ke handler yang tepat. Untuk route barang, middleware memverifikasi JWT sebelum handler dipanggil. Handler membaca input, memvalidasi, memanggil model untuk mengakses PostgreSQL, dan membentuk respons JSON. Response dikirim kembali melalui koneksi HTTP yang sama.
 
 ```text
 Client → Listener → Router → Middleware (route barang) → Handler

@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
+use axum::extract::Extension;
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
+use crate::auth::buat_token;
+use crate::models::user::User;
 use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
-use tower_sessions::Session;
-
-use crate::models::user::User;
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -71,7 +73,7 @@ pub async fn register(
 
 pub async fn login(
     State(pool): State<PgPool>,
-    session: Session,
+    Extension(jwt_secret): Extension<Arc<str>>,
     Json(input): Json<LoginRequest>,
 ) -> axum::response::Response {
     let valid = match User::cek_login(&pool, &input.username, &input.password).await {
@@ -99,38 +101,36 @@ pub async fn login(
             .into_response();
     }
 
-    if session.insert("username", input.username).await.is_err() {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({
-                "status": "error",
-                "message": "Gagal membuat session"
-            })),
-        )
-            .into_response();
-    }
+    let token = match buat_token(&input.username, &jwt_secret) {
+        Ok(token) => token,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "status": "error",
+                    "message": "Gagal membuat token autentikasi"
+                })),
+            )
+                .into_response();
+        }
+    };
 
     (
         StatusCode::OK,
         Json(json!({
             "status": "success",
             "message": "Login berhasil",
-            "session": "aktif"
+            "token_type": "Bearer",
+            "token": token,
+            "expires_in": 3600
         })),
     )
         .into_response()
 }
 
-pub async fn logout(
-    session: tower_sessions::Session,
-) -> Result<Json<serde_json::Value>, StatusCode> {
-    session
-        .flush()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(json!({
+pub async fn logout() -> Json<serde_json::Value> {
+    Json(json!({
         "status": "success",
-        "message": "Logout berhasil"
-    })))
+        "message": "Logout berhasil. Hapus token dari client."
+    }))
 }

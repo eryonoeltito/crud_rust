@@ -13,7 +13,7 @@ CRUD adalah operasi **Create, Read, Update, Delete** (membuat, membaca, mengubah
 | PATCH | `/barang/{id}` | Mengubah sebagian field |
 | DELETE | `/barang/{id}` | Menghapus barang |
 
-Semua route barang memerlukan session login. Rinciannya dijelaskan di [07 — Session, Cookie, dan Middleware](../07-session-cookie-middleware/README.md).
+Semua route barang memerlukan JWT valid pada header `Authorization: Bearer <token>`. Rinciannya dijelaskan di [07 — JWT HMAC dan Middleware](../07-session-cookie-middleware/README.md).
 
 Contoh request untuk membuat barang:
 
@@ -24,7 +24,7 @@ Content-Type: application/json
 {"nama":"Keyboard","stok":8,"harga":250000}
 ```
 
-Request ini harus disertai cookie session login. Jika valid, server mengembalikan `201 Created` beserta data barang yang baru disimpan.
+Request ini harus disertai JWT login yang valid. Jika valid, server mengembalikan `201 Created` beserta data barang yang baru disimpan.
 
 ## Alur operasi
 

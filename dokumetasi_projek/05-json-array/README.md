@@ -24,4 +24,4 @@ for (const item of barang) {
 }
 ```
 
-Client harus tetap menangani kemungkinan response error, misalnya status `401` jika session tidak ada atau `500` jika terjadi kegagalan server. Rincian status dan operasi endpoint dapat dibaca di [03 — CRUD Barang](../03-crud-barang/README.md).
+Client harus tetap menangani kemungkinan response error, misalnya status `401` jika JWT tidak ada atau tidak valid, atau `500` jika terjadi kegagalan server. Rincian status dan operasi endpoint dapat dibaca di [03 — CRUD Barang](../03-crud-barang/README.md).

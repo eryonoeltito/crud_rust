@@ -1,3 +1,4 @@
+mod auth;
 mod controllers;
 mod database;
 mod middleware;
@@ -5,11 +6,12 @@ mod models;
 mod routes;
 mod views;
 
-use axum::{Json, Router, routing::get};
+use std::sync::Arc;
+
+use axum::{Json, Router, extract::Extension, routing::get};
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
-use tower_sessions::{Expiry, MemoryStore, SessionManagerLayer};
 
 use crate::routes::{auth_routes, barang_routes};
 
@@ -33,21 +35,21 @@ async fn main() {
         .unwrap_or_else(|error| panic!("Inisialisasi database gagal: {error}"));
     println!("Tabel `barang` dan `users` siap digunakan.");
 
-    let session_store = MemoryStore::default();
-
-    let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false)
-        .with_expiry(Expiry::OnSessionEnd);
+    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET tidak ditemukan di file .env");
+    if jwt_secret.as_bytes().len() < 32 {
+        panic!("JWT_SECRET harus memiliki minimal 32 byte untuk HS256");
+    }
+    let jwt_secret: Arc<str> = Arc::from(jwt_secret);
 
     let app = Router::new()
         .route("/health", get(health_check))
         .merge(barang_routes::routes())
         .merge(auth_routes::routes())
         .with_state(pool)
-        .layer(session_layer);
+        .layer(Extension(jwt_secret));
 
     let app_host = std::env::var("APP_HOST").expect("APP_HOST tidak ditemukan di file .env");
-    
+
     let app_port = std::env::var("APP_PORT")
         .expect("APP_PORT tidak ditemukan di file .env")
         .parse::<u16>()

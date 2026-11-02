@@ -11,20 +11,20 @@ Autentikasi memastikan pengguna memiliki akun dan dapat membuktikan identitas se
 1. Client mengirim `POST /login` dengan JSON username dan password.
 2. Handler meminta model mengambil hash password akun dan memverifikasi password yang dikirim menggunakan Argon2.
 3. Jika tidak cocok, API mengembalikan `401 Unauthorized`.
-4. Jika cocok, handler menyimpan username ke session dan mengembalikan respons berhasil. Session layer mengelola penyimpanan session serta mengirim cookie pengenal session kepada client.
+4. Jika cocok, API membuat JWT HMAC dengan masa berlaku 1 jam dan mengembalikannya pada response JSON sebagai `token` dengan tipe `Bearer`.
 
 ## Alur logout
 
-Client mengirim `POST /logout` dengan cookie session. Handler menghapus data session melalui `session.flush()` lalu mengembalikan respons logout. Request berikutnya ke route barang tidak lagi memiliki session aktif dan ditolak middleware. Cookie yang masih tersimpan di client tidak lagi menunjuk pada session aktif.
+Client mengirim `POST /logout`, lalu menghapus token dari penyimpanan lokalnya. Karena JWT bersifat stateless, server tidak mencabut token yang sudah diterbitkan; token tersebut tetap berlaku sampai masa berlakunya habis.
 
 ## Endpoint autentikasi
 
 | Method | Path | Fungsi |
 |---|---|---|
 | POST | `/register` | Mendaftarkan akun |
-| POST | `/login` | Memeriksa kredensial dan membuat session |
-| POST | `/logout` | Mengakhiri session |
+| POST | `/login` | Memeriksa kredensial dan membuat JWT |
+| POST | `/logout` | Memberi tahu client untuk membuang JWT |
 
-Route autentikasi tidak dipasang di dalam lapisan perlindungan route barang, agar pengguna yang belum login tetap dapat mengakses endpoint login. Cara session dan middleware bekerja dijelaskan pada [07 — Session, Cookie, dan Middleware](../07-session-cookie-middleware/README.md).
+Route autentikasi tidak dipasang di dalam lapisan perlindungan route barang, agar pengguna yang belum login tetap dapat mengakses endpoint login. Cara JWT HMAC dan middleware bekerja dijelaskan pada [07 — JWT HMAC dan Middleware](../07-session-cookie-middleware/README.md).
 
 

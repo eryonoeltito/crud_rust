@@ -1,20 +1,22 @@
-# 07 — Session, Cookie, dan Middleware
+# 07 — JWT HMAC dan Middleware
 
-Session menyimpan status login di sisi server. Cookie membawa ID session dari client ke server pada request berikutnya. Middleware memeriksa session sebelum meneruskan request ke handler yang dilindungi. Ketiganya berhubungan, tetapi punya tugas berbeda: session adalah data login, cookie adalah mekanisme pengenal, dan middleware adalah pemeriksa akses.
+API menggunakan JWT bertanda tangan HMAC SHA-256 (HS256) sebagai token autentikasi. Token membawa username pada claim `sub` dan waktu kedaluwarsa pada claim `exp`. Middleware memverifikasi signature dan masa berlaku token sebelum meneruskan request ke route barang.
 
-## Konfigurasi session
+## Konfigurasi secret
 
-Di `src/main.rs`, `SessionManagerLayer` dipasang pada router utama dan menggunakan `MemoryStore`. Store menyimpan data session di memori proses; cookie client berisi ID acak untuk menemukan data itu, bukan username atau password. Dengan penyimpanan memori, session hilang ketika proses server dimulai ulang. Beberapa instance server juga tidak berbagi store memori masing-masing, sehingga deployment multi-instance memerlukan store session bersama.
+Secret JWT dibaca dari environment variable `JWT_SECRET`. Nilainya harus rahasia dan minimal 32 byte. Simpan di `.env` atau pengelola secret deployment; jangan commit nilai secret yang sebenarnya. Untuk membuat secret acak, jalankan `openssl rand -hex 32`, lalu masukkan hasilnya ke `.env` sebagai `JWT_SECRET`.
 
 ## Siklus request
 
 ```text
-Login berhasil → username disimpan ke session → response Set-Cookie
-Request berikutnya + Cookie → session layer memuat data → middleware memeriksa username
+Login berhasil → server mengirim JWT HS256 di response JSON
+Request berikutnya + Authorization: Bearer <token> → middleware memverifikasi token
 ```
 
-`wajib_login` berada di `src/middleware/auth_middleware.rs`. Middleware mengambil nilai `username` dari session. Jika session memuat username, middleware meneruskan request ke handler dengan `next.run(request)`. Jika tidak, middleware menghentikan request dan mengembalikan `401 Unauthorized` dalam bentuk JSON. Kegagalan membaca session menghasilkan error server, sebab aplikasi tidak dapat memastikan status login.
+Token berlaku selama 1 jam. Kirim token pada header `Authorization` untuk setiap request yang memerlukan login:
 
-Middleware diterapkan pada router barang dengan `route_layer`, sehingga semua route dalam router tersebut (daftar, detail, tambah, ubah, dan hapus) melewati pemeriksaan. Route register/login/logout berada di router autentikasi yang digabungkan terpisah, sehingga login tetap dapat diakses sebelum ada session. Saat logout, `session.flush()` mengakhiri session yang tersimpan.
+```http
+Authorization: Bearer <token>
+```
 
-Pada konfigurasi sekarang, cookie tidak mensyaratkan HTTPS (`with_secure(false)`) untuk mendukung pengujian lokal HTTP, dan expiry memakai `OnSessionEnd` (cookie sesi browser). Konfigurasi cookie perlu disesuaikan untuk deployment publik, termasuk HTTPS dan atribut secure. Jangan membagikan cookie session karena siapa pun yang memilikinya dapat menggunakan session tersebut selama masih berlaku. Cookie adalah kredensial aktif, jadi perlakukan seperti rahasia.
+`wajib_login` berada di `src/middleware/auth_middleware.rs` dan melindungi semua route barang. Token yang hilang, rusak, memiliki signature salah, atau kedaluwarsa ditolak dengan `401 Unauthorized`. Logout pada JWT stateless tidak dapat mencabut token dari server; client harus menghapus token, dan token yang sudah diterbitkan tetap berlaku sampai kedaluwarsa.
