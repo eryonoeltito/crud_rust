@@ -38,7 +38,8 @@ pub async fn register(
 
     let registered = match User::register(&pool, &input.username, &input.password).await {
         Ok(registered) => registered,
-        Err(_) => {
+        Err(error) => {
+            eprintln!("Gagal mendaftarkan pengguna: {error}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({
@@ -78,7 +79,8 @@ pub async fn login(
 ) -> axum::response::Response {
     let valid = match User::cek_login(&pool, &input.username, &input.password).await {
         Ok(valid) => valid,
-        Err(_) => {
+        Err(error) => {
+            eprintln!("Gagal memeriksa login: {error}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({
@@ -103,7 +105,8 @@ pub async fn login(
 
     let token = match buat_token(&input.username, &jwt_secret) {
         Ok(token) => token,
-        Err(_) => {
+        Err(error) => {
+            eprintln!("Gagal membuat token autentikasi: {error:?}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({

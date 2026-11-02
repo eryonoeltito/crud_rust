@@ -8,13 +8,22 @@ pub struct User;
 
 #[derive(Debug)]
 pub enum UserError {
-    Database,
-    PasswordHash,
+    Database(sqlx::Error),
+    PasswordHash(argon2::password_hash::Error),
+}
+
+impl std::fmt::Display for UserError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Database(error) => write!(formatter, "database error: {error}"),
+            Self::PasswordHash(error) => write!(formatter, "password hash error: {error}"),
+        }
+    }
 }
 
 impl From<sqlx::Error> for UserError {
-    fn from(_: sqlx::Error) -> Self {
-        Self::Database
+    fn from(error: sqlx::Error) -> Self {
+        Self::Database(error)
     }
 }
 
@@ -27,7 +36,7 @@ impl User {
         let salt = SaltString::generate(&mut OsRng);
         let password_hash = Argon2::default()
             .hash_password(password.as_bytes(), &salt)
-            .map_err(|_| UserError::PasswordHash)?
+            .map_err(UserError::PasswordHash)?
             .to_string();
 
         let inserted = sqlx::query_scalar::<_, i32>(
