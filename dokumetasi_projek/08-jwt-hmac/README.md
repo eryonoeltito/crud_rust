@@ -1,28 +1,20 @@
 # JWT HMAC
 
-Panduan ini membahas JWT yang dipakai proyek, dari secret sampai request yang dilindungi. Baca berurutan; setiap langkah mengikuti file dan fungsi yang benar-benar ada di source.
+JWT adalah token yang server buat setelah login berhasil. Proyek menandatanganinya dengan **HMAC SHA-256 (HS256)**. Server memakai secret yang sama untuk membuat dan memeriksa tanda tangan. Isi JWT tidak dienkripsi dan dapat dibaca, jadi jangan masukkan password atau informasi rahasia ke dalam claim.
 
-## 1. Gambaran singkat
+## Claim
 
-JWT adalah token yang server buat setelah login berhasil. Proyek menandatanganinya dengan **HMAC SHA-256 (HS256)**. Server memakai satu secret yang sama untuk membuat dan memeriksa tanda tangan. Client hanya menyimpan dan mengirim token; client tidak perlu mengetahui secret.
+Token memuat claim `sub` (username) dan `exp` (waktu kedaluwarsa). Tanda tangan HS256 membuat perubahan pada token dapat diketahui. Token berlaku selama satu jam.
 
-Token berisi claim `sub` (username) dan `exp` (waktu kedaluwarsa). Tanda tangan membuat perubahan pada token dapat diketahui. Isi token tidak dienkripsi, jadi jangan masukkan password atau informasi rahasia ke dalam claim.
+## Membuat token saat login
 
-## 2. Siapkan secret
-
-`src/main.rs` membaca `JWT_SECRET` dari environment. Server berhenti saat startup jika nilainya tidak ada atau panjangnya kurang dari 32 byte. Buat nilai acak, misalnya dengan `openssl rand -hex 32`, kemudian simpan hasilnya sebagai `JWT_SECRET=...` di `.env`. Jangan commit nilai rahasia tersebut.
-
-## 3. Membuat token saat login
-
-Urutannya ada di `src/controllers/auth_controller.rs` dan `src/auth.rs`:
-
-1. Handler login memeriksa username dan password lewat `User::cek_login`. Password diverifikasi terhadap hash Argon2 yang disimpan di database.
+1. Handler login memeriksa username dan password melalui `User::cek_login`. Password diverifikasi terhadap hash Argon2 di database.
 2. Jika cocok, handler memanggil `buat_token(username, secret)`.
-3. `buat_token` menghitung waktu sekarang dalam detik Unix, lalu menambah 1 jam untuk nilai `exp`.
-4. Fungsi membentuk claim `{ sub, exp }` dan meminta crate `jsonwebtoken` menandatanganinya dengan `HS256` serta `JWT_SECRET`.
-5. Handler mengirim token di JSON response. Client menyimpan token dan mengirimkannya pada request berikutnya.
+3. `buat_token` mengisi `sub` dengan username, menghitung waktu sekarang, lalu menetapkan `exp` satu jam ke depan.
+4. Crate `jsonwebtoken` menandatangani claim dengan algoritma HS256 dan `JWT_SECRET`.
+5. Handler mengirim token melalui response JSON. Client mengirimkannya pada request berikutnya.
 
-Response login memiliki bentuk seperti ini:
+Contoh bentuk response login:
 
 ```json
 {
@@ -33,39 +25,43 @@ Response login memiliki bentuk seperti ini:
 }
 ```
 
-Ganti `<jwt>` dengan nilai `token` yang benar-benar diterima. Token ini kredensial aktif: jangan bagikan atau catat ke log.
+Jangan membagikan atau mencatat token yang sebenarnya karena token adalah kredensial aktif.
 
-## 4. Mengirim token
+## Mengirim dan memeriksa token
 
-Tambahkan token ke header `Authorization` untuk route barang:
+Kirim token melalui header berikut untuk route barang:
 
 ```http
 Authorization: Bearer <jwt>
 ```
 
-`Bearer` menyatakan bahwa client mengirim token sebagai bukti akses. Jangan sertakan tanda kurung sudut pada nilai sebenarnya.
+Middleware `wajib_login` membaca header, mengambil token dari format Bearer, lalu memanggil `validasi_token`. Validasi hanya menerima HS256 serta memeriksa signature dan claim wajib `exp` serta `sub`. Pemeriksaan `exp` menggunakan `leeway = 0`, sehingga tidak ada toleransi waktu tambahan setelah token kedaluwarsa. Token tanpa header Bearer yang benar, signature tidak valid, atau sudah kedaluwarsa ditolak dengan `401 Unauthorized`. Token yang valid diteruskan ke handler.
 
-## 5. Memeriksa token pada middleware
+## Logout dan masa berlaku
 
-`src/middleware/auth_middleware.rs` menjalankan pemeriksaan sebelum handler barang:
+Endpoint `POST /logout` mengembalikan respons logout berhasil dan meminta client menghapus token dari penyimpanan lokal. Server tidak membatalkan token. Token yang sama tetap dapat digunakan sampai waktu `exp` terlewati, selama signature HS256-nya valid.
 
-1. Ambil nilai header `Authorization`.
-2. Pastikan formatnya diawali `Bearer `, lalu ambil token setelahnya.
-3. Panggil `validasi_token(token, secret)` dari `src/auth.rs`.
-4. Fungsi validasi hanya menerima algoritma `HS256`, meminta claim `exp` dan `sub`, lalu memeriksa signature dan kedaluwarsa.
-5. Jika valid, middleware menjalankan handler berikutnya dengan `next.run(request)`. Jika tidak ada atau tidak valid, API mengembalikan `401 Unauthorized`.
+## Status pengujian
 
-## 6. Logout dan batas JWT stateless
+Hasil pengujian runtime manual menggunakan curl:
 
-Endpoint `POST /logout` memberi respons agar client menghapus token. Server tidak menyimpan daftar token aktif, jadi logout tidak bisa membatalkan token yang sudah dibuat. Token yang masih dipegang orang lain tetap berlaku sampai 1 jamnya habis.
+| Pengujian | Hasil |
+|---|---|
+| Login dengan akun valid | `200 OK` |
+| GET `/barang` dengan token valid | `200 OK` |
+| POST `/logout` dengan token | `200 OK` |
+| GET `/barang` dengan token yang sama setelah logout | `200 OK` |
+| GET `/barang` tanpa token | `401 Unauthorized` |
+
+Hasil ini menunjukkan logout meminta client menghapus token, tetapi token yang sama tetap berlaku di server. Middleware tetap menolak request tanpa token. Pengujian kedaluwarsa token belum dilakukan secara runtime; middleware tetap memeriksa claim `exp`.
+
+Pemeriksaan statis `cargo fmt --check`, `cargo check`, dan `cargo test` berhasil. `cargo test` melaporkan 0 automated test; hasil tersebut bukan pengujian otomatis untuk logout atau kedaluwarsa JWT.
 
 ## Peta file
 
 | File | Tugas |
 |---|---|
-| `src/main.rs` | Membaca dan memeriksa secret, lalu memasangnya sebagai `Extension` Axum. |
-| `src/auth.rs` | Membuat claim/token dan memvalidasi token HS256. |
+| `src/auth.rs` | Membuat claim dan token HS256 serta memvalidasi token. |
 | `src/controllers/auth_controller.rs` | Memeriksa login, mengembalikan token, dan menangani logout. |
-| `src/middleware/auth_middleware.rs` | Mengambil Bearer token dan melindungi route barang. |
-
-Ikuti alur belajar ini: mulai dari `main.rs` untuk memahami dari mana secret datang, lanjut ke `buat_token`, lalu ikuti token dari response login ke middleware dan `validasi_token`.
+| `src/middleware/auth_middleware.rs` | Membaca Bearer token dan melindungi route barang. |
+| `src/routes/barang_routes.rs` | Memasang middleware autentikasi pada seluruh route barang. |

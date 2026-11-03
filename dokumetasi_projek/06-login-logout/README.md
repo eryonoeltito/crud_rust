@@ -4,18 +4,22 @@ Autentikasi memastikan pengguna memiliki akun dan dapat membuktikan identitas se
 
 ## Registrasi
 
-`POST /register` menerima JSON dengan `username` dan `password`. Handler menolak username kosong atau password kosong dengan `400 Bad Request`. Model memeriksa apakah username telah dipakai; jika sudah, API merespons `409 Conflict`. Jika belum, model membuat hash Argon2 dengan salt unik dan menyimpan hash tersebut, lalu API mengembalikan `201 Created`.
+`POST /register` menerima JSON dengan `username` dan `password`. Handler menolak username kosong atau password kosong dengan `400 Bad Request`. Jika username sudah digunakan, API merespons `409 Conflict`. Jika belum, model membuat hash Argon2 dengan salt unik dan menyimpannya; API kemudian mengembalikan `201 Created`.
 
-## Alur login
+## Login
 
-1. Client mengirim `POST /login` dengan JSON username dan password.
-2. Handler meminta model mengambil hash password akun dan memverifikasi password yang dikirim menggunakan Argon2.
-3. Jika tidak cocok, API mengembalikan `401 Unauthorized`.
-4. Jika cocok, API membuat JWT HMAC dengan masa berlaku 1 jam dan mengembalikannya pada response JSON sebagai `token` dengan tipe `Bearer`.
+1. Client mengirim `POST /login` dengan username dan password dalam JSON.
+2. Handler mengambil hash password akun dan memverifikasi password menggunakan Argon2.
+3. Jika kredensial tidak cocok, API mengembalikan `401 Unauthorized`.
+4. Jika cocok, API membuat JWT HS256 dengan claim `sub` (username) dan `exp` (kedaluwarsa satu jam), lalu mengembalikannya sebagai `token` bertipe `Bearer`.
 
-## Alur logout
+Client mengirim token pada header `Authorization: Bearer <jwt>` saat mengakses route barang. Detail validasi JWT dijelaskan di [08 — JWT HMAC](../08-jwt-hmac/README.md).
 
-Client mengirim `POST /logout`, lalu menghapus token dari penyimpanan lokalnya. Karena JWT bersifat stateless, server tidak mencabut token yang sudah diterbitkan; token tersebut tetap berlaku sampai masa berlakunya habis.
+## Logout
+
+`POST /logout` mengembalikan respons logout berhasil dan meminta client menghapus token dari penyimpanan lokalnya. Server tidak membatalkan token. Token yang sama tetap dapat digunakan selama signature HS256 valid dan waktu `exp` belum terlewati. Middleware memeriksa token sebelum mengizinkan akses ke route barang; request tanpa token atau dengan token tidak valid ditolak.
+
+Hasil pengujian runtime manual untuk login, akses barang, logout, dan penggunaan token setelah logout dicatat di [panduan JWT HMAC](../08-jwt-hmac/README.md). Pengujian token kedaluwarsa belum dilakukan secara runtime.
 
 ## Endpoint autentikasi
 
@@ -25,6 +29,5 @@ Client mengirim `POST /logout`, lalu menghapus token dari penyimpanan lokalnya. 
 | POST | `/login` | Memeriksa kredensial dan membuat JWT |
 | POST | `/logout` | Memberi tahu client untuk membuang JWT |
 
-Route autentikasi tidak dipasang di dalam lapisan perlindungan route barang, agar pengguna yang belum login tetap dapat mengakses endpoint login. Cara JWT HMAC dan middleware bekerja dijelaskan pada [07 — JWT HMAC dan Middleware](../07-session-cookie-middleware/README.md).
-
+Route autentikasi tidak dipasang di dalam lapisan perlindungan route barang. Dengan demikian, login dan logout tidak memerlukan token; seluruh route barang tetap dilindungi middleware.
 
