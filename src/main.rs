@@ -8,12 +8,13 @@ mod views;
 
 use std::sync::Arc;
 
-use axum::{Json, Router, extract::Extension, routing::get};
+use axum::{Json, Router, extract::Extension, http::StatusCode, routing::get};
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 
 use crate::routes::{auth_routes, barang_routes};
+use crate::views::error_view::error_response;
 
 #[tokio::main]
 async fn main() {
@@ -45,6 +46,10 @@ async fn main() {
         .route("/health", get(health_check))
         .merge(barang_routes::routes())
         .merge(auth_routes::routes())
+        .fallback(|| async { error_response(StatusCode::NOT_FOUND, "Route tidak ditemukan") })
+        .method_not_allowed_fallback(|| async {
+            error_response(StatusCode::METHOD_NOT_ALLOWED, "Method tidak diizinkan")
+        })
         .with_state(pool)
         .layer(Extension(jwt_secret));
 

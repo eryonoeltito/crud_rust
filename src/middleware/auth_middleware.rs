@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
+use crate::auth::validasi_token;
+use crate::views::error_view::error_response;
 use axum::{
-    Json,
     extract::{Extension, Request},
     http::StatusCode,
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
 };
-use serde_json::json;
-
-use crate::auth::validasi_token;
 
 pub async fn wajib_login(
     Extension(jwt_secret): Extension<Arc<str>>,
@@ -24,14 +22,7 @@ pub async fn wajib_login(
         .is_some_and(|token| validasi_token(token, &jwt_secret).is_ok());
 
     if !token_valid {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({
-                "status": "error",
-                "message": "Token tidak ada atau tidak valid"
-            })),
-        )
-            .into_response();
+        return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
     }
 
     next.run(request).await
