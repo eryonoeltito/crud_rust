@@ -6,6 +6,13 @@ use sqlx::{PgConnection, PgPool};
 
 pub struct User;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AkunTerverifikasi {
+    pub id: i64,
+    pub role: Option<String>,
+    pub gudang_id: Option<i64>,
+}
+
 #[derive(Debug)]
 pub enum UserError {
     Database(sqlx::Error),
@@ -28,6 +35,31 @@ impl From<sqlx::Error> for UserError {
 }
 
 impl User {
+    pub async fn ambil_akun_terverifikasi(
+        pool: &PgPool,
+        id: i64,
+    ) -> Result<Option<AkunTerverifikasi>, sqlx::Error> {
+        let akun = sqlx::query_as::<_, (i64, Option<String>, Option<i64>)>(
+            "SELECT id, role, gudang_id
+             FROM public.users
+             WHERE id = $1
+               AND aktif = TRUE
+               AND (
+                   (role = 'admin' AND gudang_id IS NULL)
+                   OR (role = 'petugas_gudang' AND gudang_id IS NOT NULL)
+               )",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(akun.map(|(id, role, gudang_id)| AkunTerverifikasi {
+            id,
+            role,
+            gudang_id,
+        }))
+    }
+
     pub async fn register(
         pool: &PgPool,
         username: &str,

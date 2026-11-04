@@ -1,4 +1,15 @@
-use sqlx::PgConnection;
+use sqlx::{PgConnection, PgPool};
+
+pub async fn periksa_token_dicabut(pool: &PgPool, jti: &str) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (
+            SELECT 1 FROM public.revoked_tokens WHERE jti = $1
+         )",
+    )
+    .bind(jti)
+    .fetch_one(pool)
+    .await
+}
 
 pub async fn cabut_token(
     koneksi: &mut PgConnection,

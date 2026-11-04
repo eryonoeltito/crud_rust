@@ -50,6 +50,7 @@ async fn main() {
         .method_not_allowed_fallback(|| async {
             error_response(StatusCode::METHOD_NOT_ALLOWED, "Method tidak diizinkan")
         })
+        .layer(Extension(pool.clone()))
         .with_state(pool)
         .layer(Extension(jwt_secret));
 
