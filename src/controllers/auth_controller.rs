@@ -1,9 +1,15 @@
 use std::sync::Arc;
 
 use axum::extract::{Extension, rejection::JsonRejection};
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{
+    Json,
+    extract::State,
+    http::{HeaderMap, StatusCode, header::AUTHORIZATION},
+    response::{IntoResponse, Response},
+};
 
-use crate::auth::buat_token;
+use crate::auth::{buat_token, validasi_token};
+use crate::models::revoked_token::cabut_token;
 use crate::models::user::User;
 use crate::views::error_view::error_response;
 use serde::Deserialize;
@@ -72,8 +78,22 @@ pub async fn login(
             return error_response(rejection.into_response().status(), "Body JSON tidak valid");
         }
     };
-    let valid = match User::cek_login(&pool, &input.username, &input.password).await {
-        Ok(valid) => valid,
+    let mut koneksi = match pool.acquire().await {
+        Ok(koneksi) => koneksi,
+        Err(error) => {
+            eprintln!("Gagal membuka koneksi untuk login: {error}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Terjadi kesalahan pada server",
+            );
+        }
+    };
+
+    let user_id = match User::cek_login(&mut koneksi, &input.username, &input.password).await {
+        Ok(Some(user_id)) => user_id,
+        Ok(None) => {
+            return error_response(StatusCode::UNAUTHORIZED, "Username atau password salah");
+        }
         Err(error) => {
             eprintln!("Gagal memeriksa login: {error}");
             return error_response(
@@ -83,11 +103,7 @@ pub async fn login(
         }
     };
 
-    if !valid {
-        return error_response(StatusCode::UNAUTHORIZED, "Username atau password salah");
-    }
-
-    let token = match buat_token(&input.username, &jwt_secret) {
+    let token = match buat_token(user_id, &jwt_secret) {
         Ok(token) => token,
         Err(error) => {
             eprintln!("Gagal membuat token autentikasi: {error:?}");
@@ -111,9 +127,52 @@ pub async fn login(
         .into_response()
 }
 
-pub async fn logout() -> Json<serde_json::Value> {
-    Json(json!({
-        "status": "success",
-        "message": "Logout berhasil. Hapus token dari client."
-    }))
+pub async fn logout(
+    State(pool): State<PgPool>,
+    Extension(jwt_secret): Extension<Arc<str>>,
+    headers: HeaderMap,
+) -> Response {
+    let Some(token) = headers
+        .get(AUTHORIZATION)
+        .and_then(|nilai| nilai.to_str().ok())
+        .and_then(|nilai| nilai.strip_prefix("Bearer "))
+    else {
+        return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
+    };
+
+    let klaim = match validasi_token(token, &jwt_secret) {
+        Ok(klaim) => klaim,
+        Err(_) => {
+            return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
+        }
+    };
+
+    let Ok(waktu_kedaluwarsa) = i64::try_from(klaim.exp) else {
+        return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
+    };
+
+    let mut koneksi = match pool.acquire().await {
+        Ok(koneksi) => koneksi,
+        Err(error) => {
+            eprintln!("Gagal membuka koneksi untuk logout: {error}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Terjadi kesalahan pada server",
+            );
+        }
+    };
+
+    if let Err(error) = cabut_token(&mut koneksi, &klaim.jti, waktu_kedaluwarsa).await {
+        eprintln!("Gagal mencabut token: {error}");
+        return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Gagal mencabut token");
+    }
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "message": "Logout berhasil"
+        })),
+    )
+        .into_response()
 }

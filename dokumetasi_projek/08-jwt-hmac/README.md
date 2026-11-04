@@ -4,15 +4,16 @@ JWT adalah token yang server buat setelah login berhasil. Proyek menandatanganin
 
 ## Claim
 
-Token memuat claim `sub` (username) dan `exp` (waktu kedaluwarsa). Tanda tangan HS256 membuat perubahan pada token dapat diketahui. Token berlaku selama satu jam.
+Token memuat claim `sub` (ID pengguna dalam bentuk teks), `exp` (waktu kedaluwarsa), dan `jti` (identitas acak token). Tanda tangan HS256 membuat perubahan pada token dapat diketahui. Token berlaku selama satu jam.
 
 ## Membuat token saat login
 
 1. Handler login memeriksa username dan password melalui `User::cek_login`. Password diverifikasi terhadap hash Argon2 di database.
-2. Jika cocok, handler memanggil `buat_token(username, secret)`.
-3. `buat_token` mengisi `sub` dengan username, menghitung waktu sekarang, lalu menetapkan `exp` satu jam ke depan.
-4. Crate `jsonwebtoken` menandatangani claim dengan algoritma HS256 dan `JWT_SECRET`.
-5. Handler mengirim token melalui response JSON. Client mengirimkannya pada request berikutnya.
+2. Model mengambil ID, hash password, dan status aktif terbaru dari database, lalu memverifikasi password memakai Argon2. Akun nonaktif tidak memperoleh token.
+3. Jika login diizinkan, handler memanggil `buat_token(user_id, secret)`.
+4. `buat_token` mengisi `sub` dengan ID pengguna, membuat `jti` acak, dan menetapkan `exp` satu jam ke depan.
+5. Crate `jsonwebtoken` menandatangani claim dengan algoritma HS256 dan `JWT_SECRET`.
+6. Handler mengirim token melalui response JSON. Client mengirimkannya pada request berikutnya.
 
 Contoh bentuk response login:
 
@@ -35,15 +36,17 @@ Kirim token melalui header berikut untuk route barang:
 Authorization: Bearer <jwt>
 ```
 
-Middleware `wajib_login` membaca header, mengambil token dari format Bearer, lalu memanggil `validasi_token`. Validasi hanya menerima HS256 serta memeriksa signature dan claim wajib `exp` serta `sub`. Pemeriksaan `exp` menggunakan `leeway = 0`, sehingga tidak ada toleransi waktu tambahan setelah token kedaluwarsa. Token tanpa header Bearer yang benar, signature tidak valid, atau sudah kedaluwarsa ditolak dengan `401 Unauthorized`. Token yang valid diteruskan ke handler.
+Middleware `wajib_login` membaca header, mengambil token dari format Bearer, lalu memanggil `validasi_token`. Validasi hanya menerima HS256 serta memeriksa signature dan claim wajib `exp`, `sub`, dan `jti`. `sub` harus berisi ID pengguna dan `jti` tidak boleh kosong. Pemeriksaan `exp` menggunakan `leeway = 0`, sehingga tidak ada toleransi waktu tambahan setelah token kedaluwarsa. Token tanpa header Bearer yang benar, signature tidak valid, claim wajib yang hilang, atau token kedaluwarsa ditolak dengan `401 Unauthorized`.
 
 ## Logout dan masa berlaku
 
-Endpoint `POST /logout` mengembalikan respons logout berhasil dan meminta client menghapus token dari penyimpanan lokal. Server tidak membatalkan token. Token yang sama tetap dapat digunakan sampai waktu `exp` terlewati, selama signature HS256-nya valid.
+Endpoint `POST /logout` memvalidasi signature, `exp`, `sub`, dan `jti`, lalu menyimpan `jti` beserta `expires_at` dari claim `exp` di `public.revoked_tokens`. Query memakai `ON CONFLICT (jti) DO NOTHING`, jadi logout berulang tetap berhasil tanpa baris duplikat. Validasi khusus logout tidak menolak token hanya karena sudah tercatat revoked, agar logout dapat diulang. Token lama tanpa `jti` ditolak; pengguna harus login kembali.
+
+Middleware route barang belum memeriksa tabel revoked token. Jadi pencatatan logout sudah dilakukan server, tetapi penolakan token yang dicabut pada endpoint barang menunggu Tahap 2. Client sebaiknya tetap menghapus token lokal setelah logout.
 
 ## Status pengujian
 
-Hasil pengujian runtime manual menggunakan curl:
+Hasil berikut adalah catatan pengujian manual terdahulu, sebelum pencatatan revocation pada server diterapkan:
 
 | Pengujian | Hasil |
 |---|---|
@@ -53,9 +56,9 @@ Hasil pengujian runtime manual menggunakan curl:
 | GET `/barang` dengan token yang sama setelah logout | `200 OK` |
 | GET `/barang` tanpa token | `401 Unauthorized` |
 
-Hasil ini menunjukkan logout meminta client menghapus token, tetapi token yang sama tetap berlaku di server. Middleware tetap menolak request tanpa token. Pengujian kedaluwarsa token belum dilakukan secara runtime; middleware tetap memeriksa claim `exp`.
+Hasil tersebut menggambarkan perilaku lama. Saat ini logout mencatat token di server, tetapi hasil `GET /barang` setelah logout belum berubah karena middleware Tahap 2 belum memeriksa tabel pencabutan. Pengujian akses token revoked setelah Tahap 2 belum dilakukan.
 
-Pemeriksaan statis `cargo fmt --check`, `cargo check`, dan `cargo test` berhasil. `cargo test` melaporkan 0 automated test; hasil tersebut bukan pengujian otomatis untuk logout atau kedaluwarsa JWT.
+Pemeriksaan `cargo fmt --check`, `cargo check`, dan `cargo test` berhasil. Unit test terakhir melaporkan 9 lulus dan 2 test integrasi database diabaikan karena memerlukan `DATABASE_URL_TEST` yang menunjuk database uji terpisah dengan skema hasil migration. Pengujian integrasi login aktif/nonaktif dan logout berulang belum dijalankan.
 
 ## Peta file
 

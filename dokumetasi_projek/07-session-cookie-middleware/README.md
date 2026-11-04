@@ -1,6 +1,6 @@
 # 07 — JWT HMAC dan Middleware
 
-API menggunakan JWT bertanda tangan HMAC SHA-256 (HS256) sebagai token autentikasi. Token membawa username pada claim `sub` dan waktu kedaluwarsa pada claim `exp`. Middleware memverifikasi signature dan masa berlaku token sebelum meneruskan request ke route barang.
+API menggunakan JWT bertanda tangan HMAC SHA-256 (HS256) sebagai token autentikasi. Token membawa ID pengguna sebagai teks pada claim `sub`, waktu kedaluwarsa pada claim `exp`, dan identitas unik token pada claim `jti`. Middleware memverifikasi signature dan masa berlaku token sebelum meneruskan request ke route barang.
 
 ## Konfigurasi secret
 
@@ -19,4 +19,6 @@ Token berlaku selama 1 jam. Kirim token pada header `Authorization` untuk setiap
 Authorization: Bearer <token>
 ```
 
-`wajib_login` berada di `src/middleware/auth_middleware.rs` dan melindungi semua route barang. Token yang hilang, rusak, memiliki signature salah, atau kedaluwarsa ditolak dengan `401 Unauthorized`. Logout pada JWT stateless tidak dapat mencabut token dari server; client harus menghapus token, dan token yang sudah diterbitkan tetap berlaku sampai kedaluwarsa.
+`wajib_login` berada di `src/middleware/auth_middleware.rs` dan melindungi semua route barang. Token yang hilang, rusak, memiliki signature salah, atau kedaluwarsa ditolak dengan `401 Unauthorized`. Handler `POST /logout` memvalidasi token lalu mencatat `jti` dan `exp` di `public.revoked_tokens`; logout berulang tidak membuat baris ganda.
+
+Middleware saat ini belum memeriksa `public.revoked_tokens`. Jadi pencatatan logout telah dilakukan server, tetapi route barang belum menolak token yang dicabut. Pemeriksaan revocation pada middleware akan diterapkan pada Tahap 2. Client tetap sebaiknya menghapus token lokal setelah logout.
