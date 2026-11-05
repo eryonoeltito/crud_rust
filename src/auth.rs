@@ -1,19 +1,18 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use argon2::password_hash::{SaltString, rand_core::OsRng};
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode,
     errors::{Error, ErrorKind},
 };
 use serde::{Deserialize, Serialize};
 
-const MASA_BERLAKU_DETIK: u64 = 60 * 60;
+const MASA_BERLAKU_DETIK: u64 = 30 * 60;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
+    pub iat: usize,
     pub exp: usize,
-    pub jti: String,
 }
 
 pub fn buat_token(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
@@ -23,8 +22,8 @@ pub fn buat_token(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::er
         .as_secs();
     let claims = Claims {
         sub: user_id.to_string(),
+        iat: sekarang as usize,
         exp: (sekarang + MASA_BERLAKU_DETIK) as usize,
-        jti: SaltString::generate(&mut OsRng).to_string(),
     };
 
     encode(
@@ -37,7 +36,7 @@ pub fn buat_token(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::er
 pub fn validasi_token(token: &str, secret: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     let mut validation = Validation::new(Algorithm::HS256);
     validation.leeway = 0;
-    validation.set_required_spec_claims(&["exp", "sub", "jti"]);
+    validation.set_required_spec_claims(&["exp", "sub", "iat"]);
 
     let klaim = decode::<Claims>(
         token,
@@ -46,7 +45,7 @@ pub fn validasi_token(token: &str, secret: &str) -> Result<Claims, jsonwebtoken:
     )
     .map(|data| data.claims)?;
 
-    if klaim.sub.parse::<i64>().is_err() || klaim.jti.trim().is_empty() {
+    if klaim.sub.parse::<i64>().is_err() {
         return Err(Error::from(ErrorKind::InvalidToken));
     }
 
@@ -70,35 +69,29 @@ mod tests {
             .as_secs();
 
         assert_eq!(claims.sub, "42");
-        assert!(!claims.jti.is_empty());
-        assert!((sekarang + 3599..=sekarang + 3600).contains(&(claims.exp as u64)));
+        assert!((sekarang..=sekarang + 1).contains(&(claims.iat as u64)));
+        assert_eq!(claims.exp as u64, claims.iat as u64 + MASA_BERLAKU_DETIK);
     }
 
     #[test]
-    fn setiap_token_memiliki_jti_berbeda() {
-        let token_pertama = buat_token(42, KUNCI_UJI).unwrap();
-        let token_kedua = buat_token(42, KUNCI_UJI).unwrap();
-
-        let klaim_pertama = validasi_token(&token_pertama, KUNCI_UJI).unwrap();
-        let klaim_kedua = validasi_token(&token_kedua, KUNCI_UJI).unwrap();
-
-        assert_ne!(klaim_pertama.jti, klaim_kedua.jti);
-    }
-
-    #[test]
-    fn token_tanpa_jti_ditolak() {
-        let klaim = serde_json::json!({
-            "sub": "42",
-            "exp": usize::MAX
-        });
+    fn iat_hanya_informasi_dan_tidak_menolak_token() {
+        let claims = Claims {
+            sub: "42".to_owned(),
+            iat: usize::MAX,
+            exp: (SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                + 60) as usize,
+        };
         let token = encode(
             &Header::new(Algorithm::HS256),
-            &klaim,
+            &claims,
             &EncodingKey::from_secret(KUNCI_UJI.as_bytes()),
         )
         .unwrap();
 
-        assert!(validasi_token(&token, KUNCI_UJI).is_err());
+        assert!(validasi_token(&token, KUNCI_UJI).is_ok());
     }
 
     #[test]
@@ -113,7 +106,7 @@ mod tests {
         let klaim = serde_json::json!({
             "sub": "42",
             "exp": usize::MAX,
-            "jti": "jti-uji"
+            "iat": 1
         });
         let token = encode(
             &Header::new(Algorithm::HS512),
@@ -129,8 +122,8 @@ mod tests {
     fn token_kedaluwarsa_ditolak() {
         let claims = Claims {
             sub: "42".to_owned(),
+            iat: 0,
             exp: 0,
-            jti: "jti-kedaluwarsa".to_owned(),
         };
         let token = encode(
             &Header::new(Algorithm::HS256),

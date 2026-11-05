@@ -3,10 +3,7 @@ use std::sync::Arc;
 use crate::views::error_view::error_response;
 use crate::{
     auth::validasi_token,
-    models::{
-        revoked_token::periksa_token_dicabut,
-        user::{AkunTerverifikasi, User},
-    },
+    models::user::{AkunTerverifikasi, User},
 };
 use axum::{
     extract::{Extension, Request},
@@ -34,20 +31,6 @@ pub async fn wajib_login(
     let Ok(klaim) = validasi_token(token, &jwt_secret) else {
         return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
     };
-
-    match periksa_token_dicabut(&pool, &klaim.jti).await {
-        Ok(true) => {
-            return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
-        }
-        Ok(false) => {}
-        Err(kesalahan) => {
-            eprintln!("Gagal memeriksa pencabutan token: {kesalahan}");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Gagal memeriksa autentikasi",
-            );
-        }
-    }
 
     let id = match klaim.sub.parse::<i64>() {
         Ok(id) => id,

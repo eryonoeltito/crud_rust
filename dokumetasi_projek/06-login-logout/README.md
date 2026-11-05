@@ -11,15 +11,15 @@ Autentikasi memastikan pengguna memiliki akun dan dapat membuktikan identitas se
 1. Client mengirim `POST /login` dengan username dan password dalam JSON.
 2. Model mengambil ID, hash password, dan status aktif terbaru dari database berdasarkan username.
 3. Password diverifikasi menggunakan Argon2. Token hanya diterbitkan bila password benar dan akun aktif. Akun tidak ditemukan, password salah, dan akun nonaktif mendapat respons generik `401 Unauthorized`.
-4. Jika login diizinkan, handler membuat JWT HS256 dengan claim `sub` (ID pengguna sebagai teks), `exp` (kedaluwarsa satu jam), dan `jti` acak, lalu mengembalikannya sebagai `token` bertipe `Bearer`.
+4. Jika login diizinkan, handler membuat JWT HS256 dengan claim `sub` (ID pengguna sebagai teks), `iat` (waktu diterbitkan), dan `exp` (kedaluwarsa 30 menit kemudian), lalu mengembalikannya sebagai `token` bertipe `Bearer`.
 
 Client mengirim token pada header `Authorization: Bearer <jwt>` saat mengakses route barang. Detail validasi JWT dijelaskan di [08 — JWT HMAC](../08-jwt-hmac/README.md).
 
 ## Logout
 
-`POST /logout` memerlukan header Bearer. Handler memvalidasi signature HS256, claim `sub`, `exp`, dan `jti`, lalu menyimpan `jti` serta waktu kedaluwarsa dari claim ke `public.revoked_tokens`. Insert memakai `ON CONFLICT (jti) DO NOTHING`, sehingga logout berulang tetap berhasil tanpa membuat baris duplikat. Token lama tanpa `jti` ditolak; pengguna perlu login kembali.
+`POST /logout` memerlukan header Bearer. Handler memvalidasi signature HS256 serta claim `sub`, `iat`, dan `exp`, lalu mengembalikan respons berhasil. Logout tidak mencabut token di server; token tetap dapat dipakai sampai kedaluwarsa. Client sebaiknya menghapus token lokal setelah logout.
 
-Middleware route barang saat ini belum memeriksa `public.revoked_tokens`. Karena itu, logout sudah mencatat pencabutan di server, tetapi belum membuat middleware endpoint barang menolak token tersebut. Penolakan pada endpoint terlindungi akan diterapkan pada Tahap 2.
+Endpoint terlindungi tetap memvalidasi token dan memeriksa status akun serta role terkini dari database. Token yang dipakai untuk logout tidak langsung menjadi tidak berlaku.
 
 Hasil pengujian runtime manual untuk login, akses barang, logout, dan penggunaan token setelah logout dicatat di [panduan JWT HMAC](../08-jwt-hmac/README.md). Pengujian token kedaluwarsa belum dilakukan secara runtime.
 
@@ -29,7 +29,7 @@ Hasil pengujian runtime manual untuk login, akses barang, logout, dan penggunaan
 |---|---|---|
 | POST | `/register` | Mendaftarkan akun |
 | POST | `/login` | Memeriksa kredensial dan membuat JWT |
-| POST | `/logout` | Memvalidasi JWT dan mencatat pencabutan token |
+| POST | `/logout` | Memvalidasi JWT dan mengembalikan respons berhasil |
 
-Route autentikasi tidak dipasang di dalam middleware revocation route barang. Handler logout memvalidasi Bearer token sendiri agar token yang sudah dicabut tetap dapat dipakai untuk mengulang logout selama belum kedaluwarsa. Login tidak memerlukan token.
+Route autentikasi tidak dipasang di dalam middleware route barang. Handler logout memvalidasi Bearer token sendiri; login dan register tidak memerlukan token.
 

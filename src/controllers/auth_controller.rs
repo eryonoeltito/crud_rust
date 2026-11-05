@@ -9,7 +9,6 @@ use axum::{
 };
 
 use crate::auth::{buat_token, validasi_token};
-use crate::models::revoked_token::cabut_token;
 use crate::models::user::User;
 use crate::views::error_view::error_response;
 use serde::Deserialize;
@@ -121,17 +120,13 @@ pub async fn login(
             "message": "Login berhasil",
             "token_type": "Bearer",
             "token": token,
-            "expires_in": 3600
+            "expires_in": 1800
         })),
     )
         .into_response()
 }
 
-pub async fn logout(
-    State(pool): State<PgPool>,
-    Extension(jwt_secret): Extension<Arc<str>>,
-    headers: HeaderMap,
-) -> Response {
+pub async fn logout(Extension(jwt_secret): Extension<Arc<str>>, headers: HeaderMap) -> Response {
     let Some(token) = headers
         .get(AUTHORIZATION)
         .and_then(|nilai| nilai.to_str().ok())
@@ -140,31 +135,8 @@ pub async fn logout(
         return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
     };
 
-    let klaim = match validasi_token(token, &jwt_secret) {
-        Ok(klaim) => klaim,
-        Err(_) => {
-            return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
-        }
-    };
-
-    let Ok(waktu_kedaluwarsa) = i64::try_from(klaim.exp) else {
+    if validasi_token(token, &jwt_secret).is_err() {
         return error_response(StatusCode::UNAUTHORIZED, "Token tidak ada atau tidak valid");
-    };
-
-    let mut koneksi = match pool.acquire().await {
-        Ok(koneksi) => koneksi,
-        Err(error) => {
-            eprintln!("Gagal membuka koneksi untuk logout: {error}");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Terjadi kesalahan pada server",
-            );
-        }
-    };
-
-    if let Err(error) = cabut_token(&mut koneksi, &klaim.jti, waktu_kedaluwarsa).await {
-        eprintln!("Gagal mencabut token: {error}");
-        return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Gagal mencabut token");
     }
 
     (
