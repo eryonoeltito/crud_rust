@@ -2,6 +2,12 @@
 
 CRUD adalah operasi **Create, Read, Update, Delete** (membuat, membaca, mengubah, menghapus). Fitur ini memungkinkan client mengelola data inventaris tanpa mengakses database secara langsung. Model data dan query berada di `src/models/barang.rs`, handler di `src/controllers/barang_controller.rs`, pemetaan URL di `src/routes/barang_routes.rs`, dan bentuk response disiapkan oleh `src/views/barang_view.rs`.
 
+## Tujuan Pembelajaran
+
+- Mengidentifikasi endpoint untuk membuat, membaca, mengubah, dan menghapus barang.
+- Menjelaskan alur validasi input dari controller ke query pada model.
+- Menjelaskan bagaimana parameter bind SQLx mengirim input ke query dengan aman.
+
 ## Endpoint
 
 | Method | Path | Operasi |

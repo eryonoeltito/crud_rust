@@ -2,6 +2,12 @@
 
 Route menghubungkan kombinasi HTTP method dan path dengan fungsi handler. Path adalah alamat yang diminta, seperti `/barang`; method menyatakan jenis tindakan, seperti GET untuk membaca atau POST untuk membuat. Handler menjalankan pekerjaan request: mengambil input, memvalidasi, memanggil model, dan menentukan respons. Pemisahan ini memudahkan kita mengetahui apakah perubahan perlu dilakukan pada pemetaan URL atau pada logika pengolahan data.
 
+## Tujuan Pembelajaran
+
+- Membedakan tanggung jawab route dan handler dalam aplikasi Axum.
+- Mengidentifikasi penggunaan extractor `State`, `Path`, dan `Json` pada handler.
+- Menjelaskan alur request dari method dan path sampai ke respons HTTP.
+
 ## Routes
 
 Pendaftaran route berada di `src/routes/`. `barang_routes.rs` mendaftarkan endpoint barang, sedangkan `auth_routes.rs` mendaftarkan register, login, dan logout. Masing-masing fungsi `routes()` menghasilkan router dengan state pool database yang diperlukan handler. Router-router itu digabungkan ke router utama di `src/main.rs`.

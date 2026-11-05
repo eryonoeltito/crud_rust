@@ -2,6 +2,12 @@
 
 Autentikasi memastikan pengguna memiliki akun dan dapat membuktikan identitas sebelum mengakses route barang. Route autentikasi didaftarkan di `src/routes/auth_routes.rs` dan diproses oleh `src/controllers/auth_controller.rs`. Model `src/models/user.rs` mengakses tabel `users` melalui pool PostgreSQL.
 
+## Tujuan Pembelajaran
+
+- Menjelaskan alur registrasi dan login menggunakan password yang diverifikasi dengan Argon2.
+- Mengidentifikasi syarat akun agar login dapat menerbitkan JWT.
+- Membedakan respons logout dari pencabutan token di server.
+
 ## Registrasi
 
 `POST /register` menerima JSON dengan `username` dan `password`. Handler menolak username kosong atau password kosong dengan `400 Bad Request`. Jika username sudah digunakan, API merespons `409 Conflict`. Jika belum, model membuat hash Argon2 dengan salt unik dan menyimpannya. Berdasarkan default skema hasil migration, akun baru berstatus pending dan nonaktif; API mengembalikan `201 Created`.
@@ -9,17 +15,17 @@ Autentikasi memastikan pengguna memiliki akun dan dapat membuktikan identitas se
 ## Login
 
 1. Client mengirim `POST /login` dengan username dan password dalam JSON.
-2. Model mengambil ID, hash password, dan status aktif terbaru dari database berdasarkan username.
-3. Password diverifikasi menggunakan Argon2. Token hanya diterbitkan bila password benar dan akun aktif. Akun tidak ditemukan, password salah, dan akun nonaktif mendapat respons generik `401 Unauthorized`.
-4. Jika login diizinkan, handler membuat JWT HS256 dengan claim `sub` (ID pengguna sebagai teks), `iat` (waktu diterbitkan), dan `exp` (kedaluwarsa 30 menit kemudian), lalu mengembalikannya sebagai `token` bertipe `Bearer`.
+2. Model mengambil ID, hash password, status aktif, dan role dari database berdasarkan username.
+3. Password diverifikasi menggunakan Argon2. Token hanya diterbitkan bila password benar, akun aktif, dan role dari database adalah `admin` atau `petugas_gudang`. Akun tidak ditemukan, password salah, akun nonaktif, dan akun dengan role lain mendapat respons generik `401 Unauthorized`.
+4. Jika login diizinkan, handler membuat JWT HS256 dengan claim `sub` (ID pengguna sebagai teks), `role` (role dari database saat login), `iat` (waktu diterbitkan), dan `exp` (kedaluwarsa 30 menit kemudian), lalu mengembalikannya sebagai `token` bertipe `Bearer`.
 
 Client mengirim token pada header `Authorization: Bearer <jwt>` saat mengakses route barang. Detail validasi JWT dijelaskan di [08 — JWT HMAC](../08-jwt-hmac/README.md).
 
 ## Logout
 
-`POST /logout` memerlukan header Bearer. Handler memvalidasi signature HS256 serta claim `sub`, `iat`, dan `exp`, lalu mengembalikan respons berhasil. Logout tidak mencabut token di server; token tetap dapat dipakai sampai kedaluwarsa. Client sebaiknya menghapus token lokal setelah logout.
+`POST /logout` memerlukan header Bearer. Handler memvalidasi signature HS256 serta claim `sub`, `role`, `iat`, dan `exp`, lalu mengembalikan respons berhasil. Logout tidak mencabut token di server; token tetap dapat dipakai sampai kedaluwarsa. Client sebaiknya menghapus token lokal setelah logout.
 
-Endpoint terlindungi tetap memvalidasi token dan memeriksa status akun serta role terkini dari database. Token yang dipakai untuk logout tidak langsung menjadi tidak berlaku.
+Endpoint terlindungi tetap memvalidasi token dan memeriksa status akun serta role terkini dari database. Claim `role` di JWT hanya mencatat role ketika token diterbitkan dan tidak menjadi sumber hak akses. Jika role berubah di database, request berikutnya memakai role terbaru meski token masih memuat role lama. Token yang dipakai untuk logout tidak langsung menjadi tidak berlaku.
 
 Hasil pengujian runtime manual untuk login, akses barang, logout, dan penggunaan token setelah logout dicatat di [panduan JWT HMAC](../08-jwt-hmac/README.md). Pengujian token kedaluwarsa belum dilakukan secara runtime.
 

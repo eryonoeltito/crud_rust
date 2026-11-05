@@ -2,6 +2,12 @@
 
 JSON (JavaScript Object Notation) adalah format teks yang umum digunakan client dan server untuk bertukar data. Endpoint daftar barang mengembalikan JSON array karena hasilnya dapat berisi nol, satu, atau banyak barang. Setiap elemen array adalah objek JSON dengan field bernama, seperti `id`, `nama`, `stok`, dan `harga`.
 
+## Tujuan Pembelajaran
+
+- Membedakan JSON array yang berisi daftar dari objek JSON untuk satu barang.
+- Menjelaskan bagaimana `Vec<Barang>` diserialisasi menjadi JSON array.
+- Mengidentifikasi cara client membaca field dari setiap objek respons.
+
 Contoh bentuk response:
 
 ```json

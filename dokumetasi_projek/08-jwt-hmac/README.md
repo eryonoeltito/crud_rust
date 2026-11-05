@@ -2,16 +2,44 @@
 
 JWT adalah token yang server buat setelah login berhasil. Proyek menandatanganinya dengan **HMAC SHA-256 (HS256)**. Server memakai secret yang sama untuk membuat dan memeriksa tanda tangan. Isi JWT tidak dienkripsi dan dapat dibaca, jadi jangan masukkan password atau informasi rahasia ke dalam claim.
 
+## Tujuan Pembelajaran
+
+- Mengidentifikasi fungsi claim `sub`, `role`, `iat`, dan `exp` pada JWT proyek.
+- Menjelaskan peran HS256 dan secret dalam pemeriksaan tanda tangan token.
+- Menguraikan cara validasi token memeriksa format claim dan masa berlaku 30 menit.
+
 ## Claim
 
-Token memuat claim `sub` (ID pengguna dalam bentuk teks), `iat` (waktu diterbitkan), dan `exp` (waktu kedaluwarsa). Tanda tangan HS256 membuat perubahan pada token dapat diketahui. Token berlaku selama 30 menit. Claim `iat` hanya mencatat waktu penerbitan dan tidak digunakan untuk mencabut atau menolak token.
+Token memuat claim `sub` (ID pengguna dalam bentuk teks), `role` (role saat token diterbitkan), `iat` (waktu diterbitkan), dan `exp` (waktu kedaluwarsa). Nilai `role` hanya boleh `admin` atau `petugas_gudang`. Tanda tangan HS256 membuat perubahan pada token dapat diketahui. Token berlaku selama 30 menit. Claim `iat` hanya mencatat waktu penerbitan dan tidak digunakan untuk mencabut atau menolak token.
+
+Contoh payload untuk admin:
+
+```json
+{
+  "sub": "12",
+  "role": "admin",
+  "iat": 1760000000,
+  "exp": 1760001800
+}
+```
+
+Contoh payload untuk petugas gudang:
+
+```json
+{
+  "sub": "25",
+  "role": "petugas_gudang",
+  "iat": 1760000000,
+  "exp": 1760001800
+}
+```
 
 ## Membuat token saat login
 
 1. Handler login memeriksa username dan password melalui `User::cek_login`. Password diverifikasi terhadap hash Argon2 di database.
-2. Model mengambil ID, hash password, dan status aktif terbaru dari database, lalu memverifikasi password memakai Argon2. Akun nonaktif tidak memperoleh token.
-3. Jika login diizinkan, handler memanggil `buat_token(user_id, secret)`.
-4. `buat_token` mengisi `sub` dengan ID pengguna, `iat` dengan waktu saat ini, dan menetapkan `exp` 1800 detik setelah `iat`.
+2. Model mengambil ID, hash password, status aktif, dan role dari database, lalu memverifikasi password memakai Argon2. Akun nonaktif atau akun dengan role selain `admin` dan `petugas_gudang` tidak memperoleh token.
+3. Jika login diizinkan, handler memanggil `buat_token(user_id, role, secret)`.
+4. `buat_token` mengisi `sub` dengan ID pengguna, `role` dari database, `iat` dengan waktu saat ini, dan menetapkan `exp` 1800 detik setelah `iat`.
 5. Crate `jsonwebtoken` menandatangani claim dengan algoritma HS256 dan `JWT_SECRET`.
 6. Handler mengirim token melalui response JSON. Client mengirimkannya pada request berikutnya.
 
@@ -26,9 +54,9 @@ Contoh bentuk response login:
 }
 ```
 
-Jangan membagikan atau mencatat token yang sebenarnya karena token adalah kredensial aktif.
-
 ## Mengirim dan memeriksa token
+
+Jangan membagikan atau mencatat token yang sebenarnya karena token adalah kredensial aktif.
 
 Kirim token melalui header berikut untuk route barang:
 
@@ -36,9 +64,9 @@ Kirim token melalui header berikut untuk route barang:
 Authorization: Bearer <jwt>
 ```
 
-Middleware `wajib_login` membaca header, mengambil token dari format Bearer, lalu memanggil `validasi_token`. Validasi hanya menerima HS256 serta memeriksa signature, format claim `sub`, `iat`, dan `exp`, serta kedaluwarsa. `sub` harus berisi ID pengguna. Pemeriksaan `exp` menggunakan `leeway = 0`, sehingga tidak ada toleransi waktu tambahan setelah token kedaluwarsa. Nilai `iat` tidak diperiksa untuk memutuskan apakah token boleh digunakan. Token tanpa header Bearer yang benar, signature tidak valid, claim wajib yang hilang, atau token kedaluwarsa ditolak dengan `401 Unauthorized`.
+Middleware `wajib_login` membaca header, mengambil token dari format Bearer, lalu memanggil `validasi_token`. Validasi hanya menerima HS256 serta memeriksa signature, format claim `sub`, `role`, `iat`, dan `exp`, nilai role yang diizinkan, serta kedaluwarsa. `sub` harus berisi ID pengguna. Pemeriksaan `exp` menggunakan `leeway = 0`, sehingga tidak ada toleransi waktu tambahan setelah token kedaluwarsa. Nilai `iat` tidak diperiksa untuk memutuskan apakah token boleh digunakan. Token tanpa header Bearer yang benar, signature tidak valid, claim wajib yang hilang, atau token kedaluwarsa ditolak dengan `401 Unauthorized`.
 
-Setelah token lolos, middleware membaca akun aktif berdasarkan ID `sub` dari `public.users`. Akun yang tidak ditemukan, nonaktif, atau tidak memiliki kombinasi role dan gudang yang diizinkan ditolak dengan `401 Unauthorized`. Nilai `id`, `role`, dan `gudang_id` terbaru disimpan sebagai `AkunTerverifikasi` pada request extensions agar dapat digunakan handler. Gangguan koneksi atau query database menghasilkan `500 Internal Server Error`, bukan dianggap sebagai token tidak valid. Role dan gudang tidak dipercaya dari claim JWT atau JSON request.
+Setelah token lolos, middleware membaca akun aktif berdasarkan ID `sub` dari `public.users`. Akun yang tidak ditemukan, nonaktif, atau tidak memiliki kombinasi role dan gudang yang diizinkan ditolak dengan `401 Unauthorized`. Nilai `id`, `role`, dan `gudang_id` terbaru disimpan sebagai `AkunTerverifikasi` pada request extensions agar dapat digunakan handler. Claim `role` hanya mencatat role saat token diterbitkan; middleware tidak menggunakannya untuk memberi hak akses. Jika role atau gudang akun berubah, request berikutnya mengikuti data terbaru dari database meskipun JWT masih memuat role lama. Gangguan koneksi atau query database menghasilkan `500 Internal Server Error`, bukan dianggap sebagai token tidak valid. Role dan gudang tidak dipercaya dari claim JWT atau JSON request.
 
 ## Logout dan masa berlaku
 

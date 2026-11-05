@@ -2,6 +2,12 @@
 
 Harga adalah nilai yang perlu diperlakukan hati-hati karena representasi bilangan pecahan komputer dapat memiliki selisih kecil. Proyek ini menyimpan harga sebagai angka desimal di database, lalu memformatnya untuk tampilan response oleh `src/views/format.rs`. Pemisahan ini menjaga nilai database tetap numerik sementara API dapat menyajikan nominal yang mudah dibaca.
 
+## Tujuan Pembelajaran
+
+- Menjelaskan alasan tipe `Decimal` dan PostgreSQL `NUMERIC` digunakan untuk harga.
+- Menelusuri alur harga dari JSON ke database dan kembali ke response.
+- Mengidentifikasi aturan pemformatan rupiah pada view.
+
 ## Tipe dan alur data
 
 Model barang menggunakan `rust_decimal::Decimal`, yang dipetakan SQLx ke kolom PostgreSQL `NUMERIC`. Query tidak mengubah harga menjadi `float8`/`f64`. Tipe decimal dirancang untuk menyimpan digit desimal secara tepat, sehingga sesuai untuk nilai uang dan validasi seperti harga tidak boleh kurang dari nol.

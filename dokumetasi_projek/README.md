@@ -1,6 +1,12 @@
 # Dokumentasi API Inventaris
 
-Dokumentasi proyek dibagi menjadi sembilan bagian. Setiap bagian memiliki folder bernomor dan README yang menjelaskan topik tersebut. Susunan ini mengikuti perjalanan memahami aplikasi: konfigurasi dan koneksi terlebih dahulu, kemudian request barang, sampai proses autentikasi.
+Dokumentasi proyek dibagi menjadi sebelas bagian. Setiap bagian memiliki folder bernomor dan README yang menjelaskan topik tersebut. Susunan ini mengikuti perjalanan memahami aplikasi: konfigurasi dan koneksi terlebih dahulu, kemudian request barang, autentikasi, dan hak akses berdasarkan role.
+
+## Tujuan Pembelajaran
+
+- Menjelaskan urutan materi dokumentasi dari konfigurasi aplikasi sampai autentikasi.
+- Mengidentifikasi folder yang membahas route, database, CRUD barang, dan JWT.
+- Menelusuri alur umum request dari client hingga database dan kembali sebagai respons.
 
 | Bagian | Topik | Dokumentasi |
 |---|---|---|
@@ -13,6 +19,8 @@ Dokumentasi proyek dibagi menjadi sembilan bagian. Setiap bagian memiliki folder
 | 06 | Login dan Logout | [06-login-logout/README.md](06-login-logout/README.md) |
 | 07 | JWT HMAC dan Middleware | [07-session-cookie-middleware/README.md](07-session-cookie-middleware/README.md) |
 | 08 | JWT HMAC | [08-jwt-hmac/README.md](08-jwt-hmac/README.md) |
+| 09 | Role Admin | [09-role-admin/README.md](09-role-admin/README.md) |
+| 10 | Role Petugas Gudang | [10-role-petugas-gudang/README.md](10-role-petugas-gudang/README.md) |
 
 ## Ringkasan alur aplikasi
 
