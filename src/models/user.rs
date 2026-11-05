@@ -36,7 +36,7 @@ impl From<sqlx::Error> for UserError {
 
 impl User {
     pub async fn ambil_akun_terverifikasi(
-        pool: &PgPool,
+        koneksi: &mut PgConnection,
         id: i64,
     ) -> Result<Option<AkunTerverifikasi>, sqlx::Error> {
         let akun = sqlx::query_as::<_, (i64, Option<String>, Option<i64>)>(
@@ -50,7 +50,7 @@ impl User {
                )",
         )
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *koneksi)
         .await?;
 
         Ok(akun.map(|(id, role, gudang_id)| AkunTerverifikasi {
@@ -89,13 +89,14 @@ impl User {
         koneksi: &mut PgConnection,
         username: &str,
         password: &str,
-    ) -> Result<Option<i64>, UserError> {
-        let Some((user_id, password_hash, aktif)) = sqlx::query_as::<_, (i64, String, bool)>(
-            "SELECT id, password, aktif FROM users WHERE username = $1",
-        )
-        .bind(username)
-        .fetch_optional(&mut *koneksi)
-        .await?
+    ) -> Result<Option<(i64, String)>, UserError> {
+        let Some((user_id, password_hash, aktif, role)) =
+            sqlx::query_as::<_, (i64, String, bool, Option<String>)>(
+                "SELECT id, password, aktif, role FROM users WHERE username = $1",
+            )
+            .bind(username)
+            .fetch_optional(&mut *koneksi)
+            .await?
         else {
             return Ok(None);
         };
@@ -104,7 +105,8 @@ impl User {
         let login_diizinkan = boleh_login(password_cocok, aktif);
 
         if login_diizinkan {
-            Ok(Some(user_id))
+            let role = role.filter(|role| role_login_diizinkan(Some(role)));
+            Ok(role.map(|role| (user_id, role)))
         } else {
             Ok(None)
         }
@@ -123,6 +125,10 @@ fn verifikasi_password(password: &str, password_hash: &str) -> bool {
 
 fn boleh_login(password_cocok: bool, aktif: bool) -> bool {
     password_cocok && aktif
+}
+
+fn role_login_diizinkan(role: Option<&str>) -> bool {
+    matches!(role, Some("admin" | "petugas_gudang"))
 }
 
 #[cfg(test)]
@@ -170,6 +176,14 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn hanya_role_admin_dan_petugas_gudang_diizinkan_login() {
+        assert!(role_login_diizinkan(Some("admin")));
+        assert!(role_login_diizinkan(Some("petugas_gudang")));
+        assert!(!role_login_diizinkan(Some("superadmin")));
+        assert!(!role_login_diizinkan(None));
+    }
+
     #[tokio::test]
     #[ignore = "memerlukan database uji terpisah dengan skema RBAC hasil migration"]
     async fn login_database_mengizinkan_akun_aktif_dan_menolak_akun_nonaktif() {
@@ -214,8 +228,34 @@ mod tests {
             User::cek_login(&mut transaksi, &nama_aktif, "password-uji")
                 .await
                 .unwrap(),
-            Some(id_aktif)
+            Some((id_aktif, "petugas_gudang".to_string()))
         );
+
+        let token_lama = crate::auth::buat_token(
+            id_aktif,
+            "petugas_gudang",
+            "kunci-pengujian-jwt-yang-tidak-rahasia",
+        )
+        .unwrap();
+        sqlx::query(
+            "UPDATE public.users
+             SET role = 'admin', gudang_id = NULL
+             WHERE id = $1",
+        )
+        .bind(id_aktif)
+        .execute(&mut *transaksi)
+        .await
+        .expect("gagal mengubah role akun sementara");
+
+        let klaim_lama =
+            crate::auth::validasi_token(&token_lama, "kunci-pengujian-jwt-yang-tidak-rahasia")
+                .unwrap();
+        let akun_terbaru = User::ambil_akun_terverifikasi(&mut transaksi, id_aktif)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(klaim_lama.role, "petugas_gudang");
+        assert_eq!(akun_terbaru.role.as_deref(), Some("admin"));
         assert_eq!(
             User::cek_login(&mut transaksi, &nama_nonaktif, "password-uji")
                 .await

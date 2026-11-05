@@ -39,7 +39,18 @@ pub async fn wajib_login(
         }
     };
 
-    let akun = match User::ambil_akun_terverifikasi(&pool, id).await {
+    let mut koneksi = match pool.acquire().await {
+        Ok(koneksi) => koneksi,
+        Err(kesalahan) => {
+            eprintln!("Gagal membuka koneksi untuk autentikasi: {kesalahan}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Gagal memeriksa autentikasi",
+            );
+        }
+    };
+
+    let akun = match User::ambil_akun_terverifikasi(&mut koneksi, id).await {
         Ok(Some(akun)) => akun,
         Ok(None) => {
             return error_response(

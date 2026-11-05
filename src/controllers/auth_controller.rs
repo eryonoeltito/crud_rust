@@ -88,21 +88,22 @@ pub async fn login(
         }
     };
 
-    let user_id = match User::cek_login(&mut koneksi, &input.username, &input.password).await {
-        Ok(Some(user_id)) => user_id,
-        Ok(None) => {
-            return error_response(StatusCode::UNAUTHORIZED, "Username atau password salah");
-        }
-        Err(error) => {
-            eprintln!("Gagal memeriksa login: {error}");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Terjadi kesalahan pada server",
-            );
-        }
-    };
+    let (user_id, role) =
+        match User::cek_login(&mut koneksi, &input.username, &input.password).await {
+            Ok(Some(akun)) => akun,
+            Ok(None) => {
+                return error_response(StatusCode::UNAUTHORIZED, "Username atau password salah");
+            }
+            Err(error) => {
+                eprintln!("Gagal memeriksa login: {error}");
+                return error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Terjadi kesalahan pada server",
+                );
+            }
+        };
 
-    let token = match buat_token(user_id, &jwt_secret) {
+    let token = match buat_token(user_id, &role, &jwt_secret) {
         Ok(token) => token,
         Err(error) => {
             eprintln!("Gagal membuat token autentikasi: {error:?}");
@@ -147,4 +148,22 @@ pub async fn logout(Extension(jwt_secret): Extension<Arc<str>>, headers: HeaderM
         })),
     )
         .into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn logout_berhasil_tanpa_mencabut_token() {
+        let secret = "kunci-pengujian-jwt-yang-tidak-rahasia";
+        let token = buat_token(42, "admin", secret).unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
+
+        let respons = logout(Extension(Arc::from(secret)), headers).await;
+
+        assert_eq!(respons.status(), StatusCode::OK);
+        assert!(validasi_token(&token, secret).is_ok());
+    }
 }
