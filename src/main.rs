@@ -1,6 +1,5 @@
 mod auth;
 mod controllers;
-mod database;
 mod middleware;
 mod models;
 mod routes;
@@ -30,11 +29,6 @@ async fn main() {
         .expect("Gagal terhubung ke PostgreSQL");
 
     println!("Berhasil terhubung ke PostgreSQL!");
-
-    database::initialize(&pool)
-        .await
-        .unwrap_or_else(|error| panic!("Inisialisasi database gagal: {error}"));
-    println!("Tabel `barang` dan `users` siap digunakan.");
 
     let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET tidak ditemukan di file .env");
     if jwt_secret.as_bytes().len() < 32 {
