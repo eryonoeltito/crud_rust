@@ -20,7 +20,7 @@ JWT memuat claim `role: "admin"` sebagai informasi role saat token diterbitkan. 
 | Daftar dan detail barang | Melihat barang dari semua gudang |
 | Membuat barang | Memilih gudang dengan mengirim `gudang_id` |
 | Mengubah atau menghapus barang | Berlaku untuk barang dari semua gudang |
-| `GET /riwayat-stok` | Melihat seluruh riwayat, termasuk baris dengan `barang_id` bernilai `NULL` |
+| `GET /riwayat-stok` | Melihat seluruh riwayat, termasuk baris tanpa snapshot identitas |
 | `GET /barang/{id}/riwayat-stok` | Melihat riwayat barang tersebut dari semua gudang |
 
 Endpoint barang yang tersedia adalah `GET /barang`, `GET /barang/{id}`, `POST /barang`, `PUT /barang/{id}`, `PATCH /barang/{id}`, dan `DELETE /barang/{id}`. Kedua endpoint riwayat adalah `GET /riwayat-stok` dan `GET /barang/{id}/riwayat-stok`.
@@ -36,7 +36,7 @@ API saat ini tidak menyediakan endpoint untuk mengubah role, menetapkan gudang, 
 1. Admin login melalui `POST /login` dan menerima Bearer token jika akunnya aktif.
 2. Admin meminta `GET /barang` dengan token untuk melihat barang dari semua gudang.
 3. Admin menambahkan barang ke gudang tertentu dengan `POST /barang` dan `gudang_id` yang valid.
-4. Admin meminta `GET /riwayat-stok` untuk meninjau seluruh perubahan stok, termasuk riwayat yang tidak terkait dengan barang (`barang_id = NULL`).
+4. Admin meminta `GET /riwayat-stok` untuk meninjau seluruh perubahan stok, termasuk riwayat yang tidak terkait dengan barang (`barang_id = NULL`) dan riwayat yang snapshot identitasnya belum diketahui.
 
 Contoh body untuk membuat barang:
 

@@ -5,6 +5,8 @@ use sqlx::{FromRow, PgPool};
 pub struct RiwayatStok {
     pub id: i32,
     pub barang_id: Option<i32>,
+    pub nama_barang: Option<String>,
+    pub gudang_id: Option<i64>,
     pub stok_lama: i32,
     pub stok_baru: i32,
     pub waktu_perubahan: Option<String>,
@@ -13,7 +15,7 @@ pub struct RiwayatStok {
 impl RiwayatStok {
     pub async fn semua(pool: &PgPool) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as::<_, Self>(
-            "SELECT id, barang_id, stok_lama, stok_baru,
+            "SELECT id, barang_id, nama_barang, gudang_id, stok_lama, stok_baru,
                     waktu_perubahan::text AS waktu_perubahan
              FROM public.riwayat_stok
              ORDER BY waktu_perubahan DESC NULLS LAST",
@@ -24,11 +26,11 @@ impl RiwayatStok {
 
     pub async fn di_gudang(pool: &PgPool, gudang_id: i64) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as::<_, Self>(
-            "SELECT r.id, r.barang_id, r.stok_lama, r.stok_baru,
+            "SELECT r.id, r.barang_id, r.nama_barang, r.gudang_id,
+                    r.stok_lama, r.stok_baru,
                     r.waktu_perubahan::text AS waktu_perubahan
              FROM public.riwayat_stok r
-             JOIN public.barang b ON b.id = r.barang_id
-             WHERE b.gudang_id = $1
+             WHERE r.gudang_id = $1
              ORDER BY r.waktu_perubahan DESC NULLS LAST",
         )
         .bind(gudang_id)
@@ -68,7 +70,7 @@ impl RiwayatStok {
         barang_id: i32,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as::<_, Self>(
-            "SELECT id, barang_id, stok_lama, stok_baru,
+            "SELECT id, barang_id, nama_barang, gudang_id, stok_lama, stok_baru,
                     waktu_perubahan::text AS waktu_perubahan
              FROM public.riwayat_stok
              WHERE barang_id = $1
@@ -85,11 +87,11 @@ impl RiwayatStok {
         gudang_id: i64,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as::<_, Self>(
-            "SELECT r.id, r.barang_id, r.stok_lama, r.stok_baru,
+            "SELECT r.id, r.barang_id, r.nama_barang, r.gudang_id,
+                    r.stok_lama, r.stok_baru,
                     r.waktu_perubahan::text AS waktu_perubahan
              FROM public.riwayat_stok r
-             JOIN public.barang b ON b.id = r.barang_id
-             WHERE r.barang_id = $1 AND b.gudang_id = $2
+             WHERE r.barang_id = $1 AND r.gudang_id = $2
              ORDER BY r.waktu_perubahan DESC NULLS LAST",
         )
         .bind(barang_id)

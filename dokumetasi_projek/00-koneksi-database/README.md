@@ -22,6 +22,8 @@ Saat startup, aplikasi hanya membuka koneksi PostgreSQL dan menyiapkan `PgPool`.
 
 Tabel `barang` menyimpan `id`, `nama`, `stok`, dan `harga`; ID dibuat oleh PostgreSQL dan harga menggunakan tipe `NUMERIC`. Tabel `users` memakai username sebagai primary key serta menyimpan password sesuai model autentikasi saat ini. Penyiapan struktur tabel dilakukan secara terpisah dari proses menjalankan aplikasi.
 
+Tabel `riwayat_stok` menyimpan snapshot nullable `nama_barang` dan `gudang_id` untuk setiap perubahan stok. Migration `20261106_snapshot_riwayat_stok.sql` merekonstruksi snapshot bagi sembilan riwayat yang masih terhubung dengan barang berdasarkan nama dan gudang saat migration dijalankan; nilai tersebut bukan kepastian historis. Sembilan riwayat dengan `barang_id` bernilai `NULL` tetap memiliki kedua snapshot `NULL` karena identitasnya tidak diketahui. Foreign key snapshot gudang memakai `ON DELETE RESTRICT`, sehingga gudang yang masih dirujuk riwayat tidak dapat dihapus. Migration tersebut harus dijalankan secara terpisah dan tidak dijalankan otomatis saat aplikasi startup.
+
 Password pengguna disimpan sebagai hash Argon2, bukan sebagai teks biasa. Akun lama yang masih berisi teks biasa tidak dapat login setelah perubahan ini. Sebelum pengguna lama mendaftar ulang dengan username yang sama, administrator perlu menghapus baris akun lama dari tabel `users`; aplikasi tidak menghapus data pengguna secara otomatis.
 
 ## Alur singkat

@@ -19,7 +19,7 @@ Semua route barang dilindungi middleware JWT. Setelah token valid, middleware me
 | Detail barang | Hanya barang dari gudang tugasnya |
 | Membuat barang | Barang baru ditempatkan di gudang tugasnya |
 | Mengubah, memperbarui sebagian, atau menghapus barang | Hanya barang dari gudang tugasnya |
-| `GET /riwayat-stok` | Riwayat barang dari gudang tugasnya; baris dengan `barang_id IS NULL` tidak disertakan |
+| `GET /riwayat-stok` | Riwayat dengan snapshot `gudang_id` yang sama dengan gudang tugasnya; riwayat barang terhapus tetap disertakan |
 | `GET /barang/{id}/riwayat-stok` | Riwayat hanya jika barang berada di gudang tugasnya |
 
 Untuk barang, API menyediakan `GET /barang`, `GET /barang/{id}`, `POST /barang`, `PUT /barang/{id}`, `PATCH /barang/{id}`, dan `DELETE /barang/{id}`. Untuk riwayat, gunakan `GET /riwayat-stok` atau `GET /barang/{id}/riwayat-stok`. Semua request tersebut memerlukan `Authorization: Bearer <token-petugas>`.
@@ -29,6 +29,8 @@ Untuk barang, API menyediakan `GET /barang`, `GET /barang/{id}`, `POST /barang`,
 JWT dapat memuat claim `role: "petugas_gudang"` sebagai informasi role saat token diterbitkan. Middleware tidak memakai claim itu untuk memberi akses; role dan `gudang_id` terbaru tetap diambil dari database pada setiap request. Perubahan penugasan atau role berlaku pada request berikutnya walaupun token masih memuat informasi lama.
 
 Jika petugas meminta detail, mengubah, atau menghapus barang di gudang lain, query hanya mencari barang di gudang tugasnya. Hasilnya `404 Not Found`, sama seperti saat ID barang memang tidak ditemukan. Pemeriksaan barang untuk riwayat satu barang juga membatasi gudang dan memberikan 404 yang sama, sehingga petugas tidak mendapat petunjuk apakah barang itu ada di gudang lain.
+
+Daftar riwayat petugas difilter menggunakan `gudang_id` snapshot pada setiap baris riwayat, bukan relasi ke tabel `barang`. Karena itu, riwayat barang yang telah dihapus tetap terlihat oleh petugas gudang asal. Riwayat dengan snapshot gudang yang tidak diketahui tidak ditampilkan kepada petugas. Gudang yang masih dirujuk oleh riwayat tidak dapat dihapus karena foreign key menggunakan `ON DELETE RESTRICT`.
 
 ## Contoh alur penggunaan
 
