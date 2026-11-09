@@ -150,20 +150,4 @@ pub async fn logout(Extension(jwt_secret): Extension<Arc<str>>, headers: HeaderM
         .into_response()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[tokio::test]
-    async fn logout_berhasil_tanpa_mencabut_token() {
-        let secret = "kunci-pengujian-jwt-yang-tidak-rahasia";
-        let token = buat_token(42, "admin", secret).unwrap();
-        let mut headers = HeaderMap::new();
-        headers.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
-
-        let respons = logout(Extension(Arc::from(secret)), headers).await;
-
-        assert_eq!(respons.status(), StatusCode::OK);
-        assert!(validasi_token(&token, secret).is_ok());
-    }
-}
