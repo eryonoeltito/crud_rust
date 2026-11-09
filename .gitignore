@@ -16,3 +16,9 @@
 
 # Folder hasil build Rust
 /target/
+
+# Dokumentasi pribadi
+panduan_bedah_kode_inventaris_api/
+panduan_curl_inventaris_api.md
+/cara_mengaktifkan_akun/
+/dokumetasi_pengujian_projek_3_nov/
