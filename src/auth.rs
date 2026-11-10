@@ -65,4 +65,3 @@ pub fn validasi_token(token: &str, secret: &str) -> Result<Claims, jsonwebtoken:
 
     Ok(klaim)
 }
-
