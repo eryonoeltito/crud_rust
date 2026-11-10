@@ -30,7 +30,7 @@ JWT dapat memuat claim `role: "petugas_gudang"` sebagai informasi role saat toke
 
 Jika petugas meminta detail, mengubah, atau menghapus barang di gudang lain, query hanya mencari barang di gudang tugasnya. Hasilnya `404 Not Found`, sama seperti saat ID barang memang tidak ditemukan. Pemeriksaan barang untuk riwayat satu barang juga membatasi gudang dan memberikan 404 yang sama, sehingga petugas tidak mendapat petunjuk apakah barang itu ada di gudang lain.
 
-Daftar riwayat petugas difilter menggunakan `gudang_id` snapshot pada setiap baris riwayat, bukan relasi ke tabel `barang`. Karena itu, riwayat barang yang telah dihapus tetap terlihat oleh petugas gudang asal. Riwayat dengan snapshot gudang yang tidak diketahui tidak ditampilkan kepada petugas. Gudang yang masih dirujuk oleh riwayat tidak dapat dihapus karena foreign key menggunakan `ON DELETE RESTRICT`.
+Daftar riwayat petugas difilter menggunakan kolom `riwayat_stok.gudang_id`. Jika nilai kolom tersebut tidak cocok atau bernilai `NULL`, baris itu tidak masuk daftar petugas. Perilaku ketika barang dihapus bergantung pada data riwayat dan constraint database; source code yang diperiksa tidak menyediakan migration untuk menyimpulkan aturan penghapusan.
 
 ## Contoh alur penggunaan
 
