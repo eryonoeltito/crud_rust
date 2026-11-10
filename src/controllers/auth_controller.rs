@@ -9,7 +9,7 @@ use axum::{
 };
 
 use crate::auth::{buat_token, validasi_token};
-use crate::models::user::User;
+use crate::models::user::{User, UserError};
 use crate::views::error_view::error_response;
 use serde::Deserialize;
 use serde_json::json;
@@ -91,9 +91,21 @@ pub async fn login(
     let (user_id, role) =
         match User::cek_login(&mut koneksi, &input.username, &input.password).await {
             Ok(Some(akun)) => akun,
+
             Ok(None) => {
-                return error_response(StatusCode::UNAUTHORIZED, "Username atau password salah");
+                return error_response(
+                    StatusCode::UNAUTHORIZED,
+                    "Username atau password salah",
+                );
             }
+
+            Err(UserError::AkunTidakAktif) => {
+                return error_response(
+                    StatusCode::FORBIDDEN,
+                    "Akun tidak aktif. Hubungi administrator.",
+                );
+            }
+
             Err(error) => {
                 eprintln!("Gagal memeriksa login: {error}");
                 return error_response(

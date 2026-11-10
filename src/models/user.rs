@@ -17,6 +17,7 @@ pub struct AkunTerverifikasi {
 pub enum UserError {
     Database(sqlx::Error),
     PasswordHash(argon2::password_hash::Error),
+    AkunTidakAktif,
 }
 
 impl std::fmt::Display for UserError {
@@ -24,6 +25,7 @@ impl std::fmt::Display for UserError {
         match self {
             Self::Database(error) => write!(formatter, "database error: {error}"),
             Self::PasswordHash(error) => write!(formatter, "password hash error: {error}"),
+            Self::AkunTidakAktif=>write!(formatter, "akun tidak aktif")
         }
     }
 }
@@ -102,32 +104,32 @@ impl User {
         };
 
         let password_cocok = verifikasi_password(password, &password_hash);
-        let login_diizinkan = boleh_login(password_cocok, aktif);
 
-        if login_diizinkan {
-            let role = role.filter(|role| role_login_diizinkan(Some(role)));
-            Ok(role.map(|role| (user_id, role)))
-        } else {
-            Ok(None)
+        if !password_cocok {
+            return Ok(None);
         }
+
+        if !aktif {
+            return Err(UserError::AkunTidakAktif);
+        }
+
+        let role = role.filter(|role| role_login_diizinkan(Some(role)));
+
+        Ok(role.map(|role| (user_id, role)))
     }
 }
 
-fn verifikasi_password(password: &str, password_hash: &str) -> bool {
-    let Ok(parsed_hash) = PasswordHash::new(password_hash) else {
-        return false;
-    };
+    fn verifikasi_password(password: &str, password_hash: &str) -> bool {
+        let Ok(parsed_hash) = PasswordHash::new(password_hash) else {
+            return false;
+        };
 
-    Argon2::default()
-        .verify_password(password.as_bytes(), &parsed_hash)
-        .is_ok()
-}
+        Argon2::default()
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .is_ok()
+    }
 
-fn boleh_login(password_cocok: bool, aktif: bool) -> bool {
-    password_cocok && aktif
-}
-
-fn role_login_diizinkan(role: Option<&str>) -> bool {
-    matches!(role, Some("admin" | "petugas_gudang"))
-}
+    fn role_login_diizinkan(role: Option<&str>) -> bool {
+        matches!(role, Some("admin" | "petugas_gudang"))
+    }
 
