@@ -51,6 +51,6 @@ Logout hanya memvalidasi token dan mengembalikan sukses. Tidak ada revocation li
 | `src/middleware/auth_middleware.rs` | Validasi token dan akun terbaru |
 | `src/models/user.rs` | Hash/verifikasi password dan query akun |
 
-## Status pengujian
 
+## Status pengujian
 Dokumentasi ini menjelaskan perilaku berdasarkan pembacaan source code. Tidak ada hasil pengujian runtime atau laporan `cargo test` yang diverifikasi dalam pekerjaan ini. Pengujian yang perlu dilakukan meliputi login valid/salah, token kedaluwarsa, token tanpa Bearer, akun nonaktif, perubahan role/gudang, akses admin, dan pembatasan gudang petugas.
