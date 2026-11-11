@@ -48,5 +48,3 @@ Contoh body untuk menambahkan barang tidak memuat `gudang_id`:
   "harga": 75000
 }
 ```
-
-Jika barang ID 15 tidak ada di gudang tugasnya, endpoint detail atau riwayat merespons `404 Not Found`. Role yang tidak berhak dan akun tanpa penugasan gudang tidak memperoleh akses.
