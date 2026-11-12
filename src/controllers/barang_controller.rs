@@ -43,7 +43,7 @@ pub async fn list_barang(
             ));
         }
     };
-
+    
     let barang = hasil.map_err(|error| {
         eprintln!("Gagal mengambil data barang: {error}");
         error_response(

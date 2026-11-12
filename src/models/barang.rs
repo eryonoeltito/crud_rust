@@ -144,6 +144,7 @@ impl Barang {
         .fetch_one(pool)
         .await?;
 
+        
         Ok(barang)
     }
 
