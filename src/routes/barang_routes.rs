@@ -10,11 +10,11 @@ use crate::middleware::auth_middleware::wajib_login;
 pub fn routes() -> Router<PgPool> {
     Router::new()
         .route(
-            "/barang",
+            "/api/barang",
             get(barang_controller::list_barang).post(barang_controller::buat_barang),
         )
         .route(
-            "/barang/{id}",
+            "/api/barang/{id}",
             put(barang_controller::ubah_barang)
                 .delete(barang_controller::hapus_barang)
                 .patch(barang_controller::patch_barang)
