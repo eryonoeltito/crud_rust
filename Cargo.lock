@@ -803,7 +803,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "inventaris_api"
+name = "inventra"
 version = "0.1.0"
 dependencies = [
  "argon2",
