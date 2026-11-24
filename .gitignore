@@ -1,22 +1,14 @@
-
 # File kredensial dan konfigurasi rahasia
 .env
 .env.*
 !.env.example
 
 # Folder hasil build Rust
-/target/
+target/
 
 # Folder editor
 .vscode/
-# File kredensial dan konfigurasi rahasia
-.env
-.env.*
-!.env.example
-
-# Folder hasil build Rust
-/target/
 
 # Dokumentasi pribadi
 panduan_curl_inventra.md
-/z.cara_mengaktifkan_akun/
+z.cara_mengaktifkan_akun/
