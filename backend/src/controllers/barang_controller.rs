@@ -245,39 +245,10 @@ pub async fn patch_barang(
     let Json(data) = body.map_err(|rejection| {
         error_response(rejection.into_response().status(), "Body JSON tidak valid")
     })?;
-    if data.nama.is_none() && data.stok.is_none() && data.harga.is_none() {
+    if let Err(errors) = data.validasi() {
         return Err(error_response(
             StatusCode::BAD_REQUEST,
-            "PATCH harus menyertakan minimal satu field untuk diperbarui",
-        ));
-    }
-
-    // Validasi hanya kolom yang dikirim pengguna.
-    if data
-        .nama
-        .as_ref()
-        .is_some_and(|nama| nama.trim().is_empty())
-    {
-        return Err(error_response(
-            StatusCode::BAD_REQUEST,
-            "Nama barang tidak boleh kosong",
-        ));
-    }
-
-    if data.stok.is_some_and(|stok| stok < 0) {
-        return Err(error_response(
-            StatusCode::BAD_REQUEST,
-            "Stok barang tidak boleh negatif",
-        ));
-    }
-
-    if data
-        .harga
-        .is_some_and(|harga| harga < rust_decimal::Decimal::ZERO)
-    {
-        return Err(error_response(
-            StatusCode::BAD_REQUEST,
-            "Harga barang tidak boleh negatif",
+            errors.join("; "),
         ));
     }
 

@@ -33,26 +33,65 @@ pub struct BarangUpdate {
     pub harga: Option<Decimal>,
 }
 
-impl BarangBaru {
-    pub fn validasi(&self) -> Result<(), Vec<String>> {
-        let mut errors: Vec<String> = Vec::new();
+fn validasi_field_barang(
+    nama: Option<&str>,
+    stok: Option<i32>,
+    harga: Option<Decimal>,
+) -> Vec<String> {
+    let mut errors = Vec::new();
 
-        // Validasi nama
-        if self.nama.trim().is_empty() {
+    if let Some(nama) = nama {
+        if nama.trim().is_empty() {
             errors.push("Nama barang tidak boleh kosong".to_string());
         }
+    }
 
-        // Validasi stok
-        if self.stok < 0 {
+    if let Some(stok) = stok {
+        if stok < 0 {
             errors.push("Stok barang tidak boleh negatif".to_string());
         }
+    }
 
-        // Validasi harga
-        if self.harga < Decimal::ZERO {
+    if let Some(harga) = harga {
+        if harga < Decimal::ZERO {
             errors.push("Harga barang tidak boleh negatif".to_string());
         }
+    }
 
-        // Periksa apakah ada error
+    errors
+}
+
+impl BarangBaru {
+    pub fn validasi(&self) -> Result<(), Vec<String>> {
+        let errors = validasi_field_barang(
+            Some(&self.nama),
+            Some(self.stok),
+            Some(self.harga),
+        );
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+impl BarangUpdate {
+    pub fn validasi(&self) -> Result<(), Vec<String>> {
+        let mut errors = validasi_field_barang(
+            self.nama.as_deref(),
+            self.stok,
+            self.harga,
+        );
+
+        if self.nama.is_none()
+            && self.stok.is_none()
+            && self.harga.is_none()
+        {
+            errors.push("Tidak ada data yang diubah".to_string());
+        }
+
         if errors.is_empty() {
             Ok(())
         } else {
