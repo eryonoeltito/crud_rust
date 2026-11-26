@@ -4,7 +4,7 @@ Autentikasi membuktikan identitas pengguna sebelum route barang dan riwayat dipa
 
 ## Registrasi
 
-`POST /register` menerima:
+`POST /api/auth/register` menerima:
 
 ```json
 {"username":"andi","password":"rahasia"}
@@ -16,11 +16,13 @@ Username yang hanya berisi spasi atau password kosong menghasilkan `400 Bad Requ
 {"status":"success","message":"Pendaftaran berhasil"}
 ```
 
-Kode registrasi tidak menetapkan `aktif`, `role`, atau `gudang_id` dalam query. Nilai default dan proses aktivasi harus mengikuti schema/administrasi database yang sebenarnya; dokumentasi ini tidak mengasumsikannya.
+Query registrasi hanya memasukkan username dan password yang sudah di-hash; kode tidak menetapkan `aktif`, `role`, atau `gudang_id`. Migration memberi `aktif` default `FALSE`, sedangkan `role` dan `gudang_id` boleh `NULL`. Constraint akun mengatur kombinasinya: akun pending harus belum aktif dan belum memiliki role maupun gudang; admin yang aktif tidak memiliki `gudang_id`; petugas gudang yang aktif wajib memiliki `gudang_id`.
+
+Karena akun baru berstatus pending, akun tersebut belum dapat langsung login. Akun perlu diaktifkan dan diberi role serta gudang yang sesuai melalui proses administrasi di luar endpoint register; API saat ini tidak menyediakan endpoint aktivasi. Setelah aktif, admin dapat login tanpa gudang, sedangkan petugas harus sudah memiliki gudang tugas.
 
 ## Login
 
-`POST /login` memakai body username dan password. Model mengambil `id`, hash password, `aktif`, dan `role`, lalu memverifikasi password dengan Argon2.
+`POST /api/auth/login` memakai body username dan password. Model mengambil `id`, hash password, `aktif`, dan `role`, lalu memverifikasi password dengan Argon2.
 
 | Kondisi | Response |
 |---|---|
@@ -33,7 +35,7 @@ Response sukses memuat `status`, `message`, `token_type: "Bearer"`, `token`, dan
 
 ## Logout
 
-`POST /logout` memerlukan header Bearer yang valid, tetapi tidak memakai middleware database. Handler memvalidasi JWT lalu mengembalikan:
+`POST /api/auth/logout` memerlukan header Bearer yang valid, tetapi tidak memakai middleware database. Handler memvalidasi JWT lalu mengembalikan:
 
 ```json
 {"status":"success","message":"Logout berhasil"}

@@ -19,10 +19,10 @@ Semua route barang dilindungi middleware JWT. Setelah token valid, middleware me
 | Detail barang | Hanya barang dari gudang tugasnya |
 | Membuat barang | Barang baru ditempatkan di gudang tugasnya |
 | Mengubah, memperbarui sebagian, atau menghapus barang | Hanya barang dari gudang tugasnya |
-| `GET /riwayat-stok` | Riwayat dengan snapshot `gudang_id` yang sama dengan gudang tugasnya; riwayat barang terhapus tetap disertakan |
-| `GET /barang/{id}/riwayat-stok` | Riwayat hanya jika barang berada di gudang tugasnya |
+| `GET /api/riwayat-stok` | Riwayat dengan snapshot `gudang_id` yang sama dengan gudang tugasnya; catatan barang terhapus tetap disertakan |
+| `GET /api/barang/{id}/riwayat-stok` | Riwayat hanya jika barang berada di gudang tugasnya |
 
-Untuk barang, API menyediakan `GET /barang`, `GET /barang/{id}`, `POST /barang`, `PUT /barang/{id}`, `PATCH /barang/{id}`, dan `DELETE /barang/{id}`. Untuk riwayat, gunakan `GET /riwayat-stok` atau `GET /barang/{id}/riwayat-stok`. Semua request tersebut memerlukan `Authorization: Bearer <token-petugas>`.
+Untuk barang, API menyediakan `GET /api/barang`, `GET /api/barang/{id}`, `POST /api/barang`, `PUT /api/barang/{id}`, `PATCH /api/barang/{id}`, dan `DELETE /api/barang/{id}`. Untuk riwayat, gunakan `GET /api/riwayat-stok` atau `GET /api/barang/{id}/riwayat-stok`. Semua request tersebut memerlukan `Authorization: Bearer <token-petugas>`.
 
 `gudang_id` yang dipakai untuk otorisasi berasal dari `AkunTerverifikasi` hasil pemeriksaan database, bukan dari parameter request, body JSON, atau claim JWT. Saat petugas membuat barang, handler menggunakan gudang pada akun terverifikasi; petugas tidak dapat memilih gudang lain dengan mengirim `gudang_id` sendiri.
 
@@ -30,14 +30,14 @@ JWT dapat memuat claim `role: "petugas_gudang"` sebagai informasi role saat toke
 
 Jika petugas meminta detail, mengubah, atau menghapus barang di gudang lain, query hanya mencari barang di gudang tugasnya. Hasilnya `404 Not Found`, sama seperti saat ID barang memang tidak ditemukan. Pemeriksaan barang untuk riwayat satu barang juga membatasi gudang dan memberikan 404 yang sama, sehingga petugas tidak mendapat petunjuk apakah barang itu ada di gudang lain.
 
-Daftar riwayat petugas difilter menggunakan kolom `riwayat_stok.gudang_id`. Jika nilai kolom tersebut tidak cocok atau bernilai `NULL`, baris itu tidak masuk daftar petugas. Perilaku ketika barang dihapus bergantung pada data riwayat dan constraint database; source code yang diperiksa tidak menyediakan migration untuk menyimpulkan aturan penghapusan.
+Trigger membuat catatan ketika stok berubah melalui UPDATE, dengan menyimpan stok lama dan baru serta snapshot nama barang dan gudang. Daftar riwayat petugas difilter menggunakan `riwayat_stok.gudang_id` yang dicocokkan dengan gudang dari akun terverifikasi; nilai yang tidak cocok tidak masuk daftar. Saat barang dihapus, foreign key mengubah `barang_id` riwayat menjadi `NULL`, sedangkan snapshot nama barang dan gudang tetap tersedia, sehingga catatan itu masih dapat dibaca petugas gudang terkait.
 
 ## Contoh alur penggunaan
 
-1. Petugas login melalui `POST /login`. Akun harus aktif agar login dapat menerbitkan JWT.
-2. Petugas meminta `GET /barang` dengan Bearer token dan hanya menerima daftar barang gudangnya.
-3. Petugas menambahkan barang melalui `POST /barang`; gudang tujuan diambil dari akun terverifikasi.
-4. Petugas membuka `GET /barang/15/riwayat-stok` untuk melihat perubahan stok jika barang 15 berada di gudangnya.
+1. Petugas login melalui `POST /api/auth/login`. Akun harus aktif agar login dapat menerbitkan JWT.
+2. Petugas meminta `GET /api/barang` dengan Bearer token dan hanya menerima daftar barang gudangnya.
+3. Petugas menambahkan barang melalui `POST /api/barang`; gudang tujuan diambil dari akun terverifikasi.
+4. Petugas membuka `GET /api/barang/15/riwayat-stok` untuk melihat perubahan stok jika barang 15 berada di gudangnya.
 
 Contoh body untuk menambahkan barang tidak memuat `gudang_id`:
 

@@ -6,36 +6,44 @@ CRUD berarti membuat, membaca, mengubah, dan menghapus data barang. Query berada
 
 | Method | Path | Berhasil | Keterangan |
 |---|---|---|---|
-| GET | `/barang` | 200 | Admin melihat semua; petugas hanya gudangnya |
-| GET | `/barang/{id}` | 200 | Detail barang sesuai hak akses |
-| POST | `/barang` | 201 | Membuat barang |
-| PUT | `/barang/{id}` | 200 | Mengganti nama, stok, dan harga |
-| PATCH | `/barang/{id}` | 200 | Mengubah field yang dikirim |
-| DELETE | `/barang/{id}` | 200 | Menghapus barang |
+| GET | `/api/barang` | 200 | Admin melihat semua; petugas hanya gudangnya |
+| GET | `/api/barang/{id}` | 200 | Detail barang sesuai hak akses |
+| POST | `/api/barang` | 201 | Membuat barang |
+| PUT | `/api/barang/{id}` | 200 | Mengganti nama, stok, dan harga |
+| PATCH | `/api/barang/{id}` | 200 | Mengubah field yang dikirim |
+| DELETE | `/api/barang/{id}` | 200 | Menghapus barang |
 
 Semua endpoint di atas memerlukan `Authorization: Bearer <token>`.
 
 ## Request dan response
 
-Body POST dan PUT:
+Body POST:
 
 ```json
 {"nama":"Keyboard","stok":8,"harga":250000,"gudang_id":2}
 ```
 
-`gudang_id` hanya dipakai untuk memilih gudang oleh admin. Petugas tidak diberi gudang dari body; handler memakai `gudang_id` milik akun terverifikasi. Body PUT sebenarnya dipetakan ke `BarangBaru`, sehingga `nama`, `stok`, dan `harga` wajib ada. Body PATCH memakai field opsional berikut:
+`gudang_id` pada POST hanya dipakai admin untuk memilih gudang dan wajib menunjuk gudang yang ada. Petugas tidak diberi gudang dari body; handler memakai `gudang_id` milik akun terverifikasi.
+
+Body PUT:
+
+```json
+{"nama":"Keyboard","stok":8,"harga":250000}
+```
+
+Body PUT dipetakan ke `BarangBaru`, sehingga `nama`, `stok`, dan `harga` wajib ada. Body PATCH memakai field opsional berikut:
 
 ```json
 {"stok":12}
 ```
 
-PATCH menolak body tanpa field, nama kosong, stok negatif, atau harga negatif. POST/PUT menolak nama kosong, stok negatif, dan harga negatif. Response barang memakai harga string:
+PATCH menolak body tanpa field, nama kosong, stok negatif, atau harga negatif. POST/PUT menolak nama kosong, stok negatif, dan harga negatif. POST admin juga menolak `gudang_id` yang tidak diisi atau tidak ditemukan. Response barang memakai harga string:
 
 ```json
 {"id":1,"nama":"Keyboard","stok":8,"harga":"Rp250.000,00"}
 ```
 
-Jika ID tidak ditemukan atau berada di gudang lain bagi petugas, response adalah `404 Not Found`. Body/path yang tidak valid memakai status rejection Axum, input bisnis tidak valid memakai `400`, dan kegagalan query memakai `500`.
+DELETE yang berhasil mengembalikan `200 OK` dengan body `{"message":"Berhasil menghapus barang"}`. Token tidak ada atau tidak valid menghasilkan `401`; role tidak berhak atau akun petugas tanpa gudang menghasilkan `403`. Jika ID tidak ditemukan atau berada di gudang lain bagi petugas, response adalah `404 Not Found`. Body/path yang tidak valid memakai status rejection Axum, input bisnis tidak valid memakai `400`, dan kegagalan query memakai `500`.
 
 ## Alur dan keamanan query
 

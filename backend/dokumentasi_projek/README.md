@@ -39,13 +39,15 @@ Client → TcpListener → Router → wajib_login (route terlindungi)
 | Method | Path | Perlindungan |
 |---|---|---|
 | GET | `/health` | Tidak perlu token |
-| POST | `/register` | Tidak perlu token |
-| POST | `/login` | Tidak perlu token |
-| POST | `/logout` | Bearer JWT divalidasi handler |
-| GET, POST | `/barang` | JWT + akun valid |
-| GET, PUT, PATCH, DELETE | `/barang/{id}` | JWT + akun valid |
-| GET | `/riwayat-stok` | JWT + akun valid |
-| GET | `/barang/{id}/riwayat-stok` | JWT + akun valid |
+| POST | `/api/auth/register` | Tidak perlu token |
+| POST | `/api/auth/login` | Tidak perlu token |
+| POST | `/api/auth/logout` | Bearer JWT divalidasi handler |
+| GET, POST | `/api/barang` | JWT + akun valid |
+| GET, PUT, PATCH, DELETE | `/api/barang/{id}` | JWT + akun valid |
+| GET | `/api/riwayat-stok` | JWT + akun valid |
+| GET | `/api/barang/{id}/riwayat-stok` | JWT + akun valid |
+
+Riwayat stok dicatat ketika nilai stok barang berubah melalui UPDATE. Catatan menyimpan stok lama dan baru serta snapshot nama barang dan gudang, sehingga tetap dapat dibaca setelah barang dihapus; saat itu `barang_id` menjadi `NULL`. Admin dapat melihat riwayat lintas gudang, sedangkan petugas hanya melihat riwayat yang snapshot `gudang_id`-nya sesuai dengan gudang pada akun terverifikasi.
 
 ## Format error
 

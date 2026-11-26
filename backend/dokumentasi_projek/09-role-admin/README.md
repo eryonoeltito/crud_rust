@@ -20,23 +20,23 @@ JWT memuat claim `role: "admin"` sebagai informasi role saat token diterbitkan. 
 | Daftar dan detail barang | Melihat barang dari semua gudang |
 | Membuat barang | Memilih gudang dengan mengirim `gudang_id` |
 | Mengubah atau menghapus barang | Berlaku untuk barang dari semua gudang |
-| `GET /riwayat-stok` | Melihat seluruh riwayat, termasuk baris tanpa snapshot identitas |
-| `GET /barang/{id}/riwayat-stok` | Melihat riwayat barang tersebut dari semua gudang |
+| `GET /api/riwayat-stok` | Melihat riwayat dari semua gudang, termasuk catatan barang yang sudah dihapus |
+| `GET /api/barang/{id}/riwayat-stok` | Melihat riwayat barang tersebut dari semua gudang |
 
-Endpoint barang yang tersedia adalah `GET /barang`, `GET /barang/{id}`, `POST /barang`, `PUT /barang/{id}`, `PATCH /barang/{id}`, dan `DELETE /barang/{id}`. Kedua endpoint riwayat adalah `GET /riwayat-stok` dan `GET /barang/{id}/riwayat-stok`.
+Endpoint barang yang tersedia adalah `GET /api/barang`, `GET /api/barang/{id}`, `POST /api/barang`, `PUT /api/barang/{id}`, `PATCH /api/barang/{id}`, dan `DELETE /api/barang/{id}`. Kedua endpoint riwayat adalah `GET /api/riwayat-stok` dan `GET /api/barang/{id}/riwayat-stok`.
 
 ## Pengelolaan akun petugas
 
 Admin perlu memastikan akun petugas memiliki role `petugas_gudang`, `gudang_id` yang sesuai, dan status aktif. Middleware hanya meneruskan akun aktif dengan kombinasi role dan gudang yang valid.
 
-API saat ini tidak menyediakan endpoint untuk mengubah role, menetapkan gudang, atau mengaktifkan akun. `POST /register` hanya menerima username dan password; pengaturan akses akun perlu dilakukan melalui proses administrasi database di luar endpoint tersebut. Jangan menganggap body request petugas atau isi JWT sebagai sumber role dan gudang.
+API saat ini tidak menyediakan endpoint untuk mengubah role, menetapkan gudang, atau mengaktifkan akun. `POST /api/auth/register` hanya menerima username dan password; pengaturan akses akun perlu dilakukan melalui proses administrasi database di luar endpoint tersebut. Jangan menganggap body request petugas atau isi JWT sebagai sumber role dan gudang.
 
 ## Contoh alur penggunaan
 
-1. Admin login melalui `POST /login` dan menerima Bearer token jika akunnya aktif.
-2. Admin meminta `GET /barang` dengan token untuk melihat barang dari semua gudang.
-3. Admin menambahkan barang ke gudang tertentu dengan `POST /barang` dan `gudang_id` yang valid.
-4. Admin meminta `GET /riwayat-stok` untuk meninjau seluruh perubahan stok, termasuk riwayat yang tidak terkait dengan barang (`barang_id = NULL`) dan riwayat yang snapshot identitasnya belum diketahui.
+1. Admin login melalui `POST /api/auth/login` dan menerima Bearer token jika akunnya aktif.
+2. Admin meminta `GET /api/barang` dengan token untuk melihat barang dari semua gudang.
+3. Admin menambahkan barang ke gudang tertentu dengan `POST /api/barang` dan `gudang_id` yang valid.
+4. Admin meminta `GET /api/riwayat-stok` untuk meninjau catatan perubahan stok dari semua gudang. Jika barang sudah dihapus, `barang_id` pada riwayat menjadi `NULL`, tetapi snapshot nama barang dan gudangnya tetap tersedia.
 
 Contoh body untuk membuat barang:
 
